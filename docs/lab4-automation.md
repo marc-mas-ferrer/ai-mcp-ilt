@@ -4,306 +4,636 @@ title: Lab 4 - Workflow Automation
 nav_order: 6
 ---
 
-# ⚡ Lab 4: Workflow Automation - Become the AI Cost Guardian
+# ⚡ Lab 4: Automating AI Usage Monitoring
 
 **Duration:** ~30 minutes
 
-In this lab, you'll create automated workflows that transform you from someone who *monitors* AI costs to someone who *controls* them. This is your "hero moment" — building automation you can take back to your team.
+In this lab, you will create a Dynatrace Workflow that analyses token usage for your AI service and sends a notification when usage exceeds a defined threshold.
+
+This turns the DQL analysis created in Lab 2 into a repeatable automated process.
 
 ---
 
 ## 🎯 Learning Objectives
 
-- Create a Dynatrace Workflow for AI observability
-- Set up automated token usage monitoring
-- Configure alerts that matter (not noise)
-- Build a daily AI cost summary automation
-- Understand the Dynatrace automation advantage
+By the end of this lab, you will be able to:
+
+- Create and run a Dynatrace Workflow
+- Execute a DQL query from a workflow
+- Enrich token data with model pricing from a Grail lookup table
+- Add a condition based on token usage
+- Include query results in a notification
+- Test and review a workflow execution
 
 ---
 
 <div class="why-dynatrace" markdown="1">
 
-## 🏆 Why Dynatrace? The Automation Advantage
+## 🏆 From Analysis to Automation
 
-| Capability | Other Tools | Dynatrace |
-|------------|-------------|-----------|
-| Trace collection | ✅ Manual thresholds | ✅ Davis AI anomaly detection |
-| Alert configuration | ❌ You define every threshold | ✅ Auto-baselines, smart alerts |
-| Root cause | ❌ You investigate | ✅ Davis AI automatic RCA |
-| Remediation | ❌ External tools (PagerDuty, etc.) | ✅ Built-in Workflows + integrations |
-| Context | Token counts only | ✅ Tokens + infrastructure + user impact |
+In Lab 2, you manually queried token usage and estimated model cost.
 
-**The difference:** Other tools tell you *something is wrong*. Dynatrace tells you *what's wrong, why, and can fix it automatically*.
+A workflow allows the same analysis to run automatically.
 
-</div>
+| Manual analysis | Automated workflow |
+|---|---|
+| Open a Notebook | Run on a schedule |
+| Execute DQL manually | Execute DQL automatically |
+| Review the result | Evaluate a condition |
+| Decide whether action is needed | Run a notification task |
+| Repeat the process later | Reuse the same workflow |
 
----
-
-## Step 1: Navigate to Workflows
-
-### 1.1 Access the Workflows App
-
-1. In Dynatrace, click on the **Workflows** app in the left navigation (or search for it)
-
----
-
-## 🎭 Choose Your Persona
-
-From here, focus on the workflows most relevant to your role. Complete at least one workflow.
-
-<div class="persona-box developer" markdown="1">
-
-### 💻 Developer Path
-
-**Your goal:** Create workflows that alert you before users complain. Sleep better knowing automation has your back.
-
-**Must-do:** Step 2 (Token Usage Alert)
-
-</div>
-
-<div class="persona-box sre" markdown="1">
-
-### 🔧 SRE/Platform Path
-
-**Your goal:** Build the automation that makes you the AI Cost Guardian. This is your "hero moment"!
-
-**Must-do:** Step 3 (Daily Summary)
+The workflow does not automatically determine whether token usage is good or bad. You define the query, threshold, and resulting action.
 
 </div>
 
 ---
 
-<div class="persona-box developer" markdown="1">
+## Step 1: Prepare the Workshop Data
 
-## 💻 Step 2: Create a Token Usage Alert Workflow
+Before creating the workflow, make sure your service has recent trace data.
 
-This workflow will alert you when token usage exceeds a threshold — perfect for catching runaway AI costs.
+### 1.1 Generate additional traffic
 
-### 2.1 Create a New Workflow
+Open the AI Chat interface and send several messages with **Use Knowledge Base (RAG)** enabled.
 
-1. Click **+ Workflow**
-2. Name it: `Token Usage Alert - {YOUR_ATTENDEE_ID}`
+Example questions:
 
-### 2.2 Set the Trigger
+```text
+What is Dynatrace?
+```
 
-1. Click on the trigger block (the starting point)
-2. Select **Time Interval trigger**:
-   - Set to run every **15 minutes** for testing
+```text
+How does OpenTelemetry work with Dynatrace?
+```
 
-### 2.3 Add a DQL Query Action
+```text
+Explain how Grail supports observability analysis.
+```
 
-1. Click **+ Add task**
-2. Select **Execute DQL query**
-3. Enter this query:
+Each RAG request generates two LLM calls, giving the workflow enough token data to analyse.
 
-```sql
+### 1.2 Verify the pricing lookup table
+
+Open a Dynatrace Notebook and run:
+
+```dql
+load "/lookups/ai/bedrock/model-costs"
+```
+
+The result should include pricing records for:
+
+- `workshop-chat`
+- `us.amazon.nova-micro-v1:0`
+
+The lookup fields should be:
+
+- `model`
+- `input_cost_per_million_usd`
+- `output_cost_per_million_usd`
+
+Do not continue if the lookup table cannot be loaded.
+
+---
+
+## Step 2: Create the Workflow
+
+### 2.1 Open Workflows
+
+1. Open **Workflows** in Dynatrace.
+2. Select **+ Workflow**.
+3. Create a new workflow.
+4. Name it:
+
+```text
+AI Usage Monitor - {YOUR_ATTENDEE_ID}
+```
+
+### 2.2 Select a trigger
+
+Select a **Time interval trigger**.
+
+For the workshop, configure it to run every:
+
+```text
+15 minutes
+```
+
+You will also run the workflow manually, so you do not need to wait for the scheduled execution.
+
+> 💡 In a real environment, the schedule should reflect the required monitoring frequency and the expected volume of telemetry.
+
+---
+
+## Step 3: Add the Token-Usage Query
+
+### 3.1 Add a DQL task
+
+1. Add a new task after the trigger.
+2. Select **Execute DQL query**.
+3. Name the task:
+
+```text
+get_token_usage
+```
+
+4. Configure the query timeframe to include the traffic generated during the workshop.
+5. Paste the following DQL:
+
+```dql
+// Calculate token usage and estimated cost for this attendee
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.usage.input_tokens)
-| summarize 
+| summarize
     total_input_tokens = sum(gen_ai.usage.input_tokens),
     total_output_tokens = sum(gen_ai.usage.output_tokens),
-    request_count = count()
-| fieldsAdd total_tokens = total_input_tokens + total_output_tokens
-| fieldsAdd estimated_cost_usd = (total_input_tokens * 2.50 + total_output_tokens * 10.00) / 1000000
+    avg_input_tokens = avg(gen_ai.usage.input_tokens),
+    avg_output_tokens = avg(gen_ai.usage.output_tokens),
+    request_count = count(),
+    by: {gen_ai.response.model}
+| fieldsAdd total_tokens =
+    total_input_tokens + total_output_tokens
+| lookup [load "/lookups/ai/bedrock/model-costs"],
+    sourceField:gen_ai.response.model,
+    lookupField:model,
+    prefix:"pricing."
+| filter isNotNull(pricing.model)
+| fieldsAdd estimated_cost_usd =
+    (
+        total_input_tokens * pricing.input_cost_per_million_usd
+        + total_output_tokens * pricing.output_cost_per_million_usd
+    ) / 1000000.0
+| fields
+    gen_ai.response.model,
+    request_count,
+    total_input_tokens,
+    total_output_tokens,
+    total_tokens,
+    avg_input_tokens,
+    avg_output_tokens,
+    estimated_cost_usd
+| sort total_tokens desc
 ```
 
-4. Name this task: `get_token_usage`
+### 3.2 Test the task
 
-### 2.4 Add a Notification Action
+Use the task's test or run option.
 
-1. Add an **Email** -> **Send email** task
-3. Configure your message:
+The result should contain at least one record with:
 
-{% raw %}
-```
-🚨 AI Token Alert - {YOUR_ATTENDEE_ID}
+- The recorded model
+- Request count
+- Input tokens
+- Output tokens
+- Total tokens
+- Estimated cost
 
-Token usage exceeded threshold!
+The estimated cost will be very small. This is expected because Amazon Nova Micro is inexpensive and the workshop generates limited traffic.
 
-📊 Stats:
-• Total Tokens: {{ result("get_token_usage").records[0].total_tokens }}
-• Input Tokens: {{ result("get_token_usage").records[0].total_input_tokens }}
-• Output Tokens: {{ result("get_token_usage").records[0].total_output_tokens }}
-• Estimated Cost: ${{ result("get_token_usage").records[0].estimated_cost_usd | round(4) }}
-• Request Count: {{ result("get_token_usage").records[0].request_count }}
+### 3.3 Understand the result
 
-```
-{% endraw %}
+The workflow query:
 
-### 2.4 Add a Condition
+1. Retrieves spans for your attendee-specific service
+2. Keeps spans that contain input-token usage
+3. Aggregates token consumption by model
+4. Loads the Bedrock pricing lookup
+5. Matches the recorded model with its pricing
+6. Calculates the estimated model cost
 
-1. Select **Condition**
-2. Set the condition:
-{% raw %}
-   ```
-   {{ result("get_token_usage").records[0].total_tokens > 1000 }}
-   ```
-{% endraw %}
-   (Adjust threshold based on your expected usage)
-
-### 2.6 Save and Run
-
-1. Click **Create/Save draft**
-2. Click **Run**
-
-</div>
+The query supports both model identifiers stored in the lookup table.
 
 ---
 
-<div class="persona-box sre" markdown="1">
+## Step 4: Add a Usage Condition
 
-## 🔧 Step 3: Daily AI Cost Summary Workflow
+### 4.1 Add a condition
 
-Create a workflow that sends you a daily summary — no more surprise bills!
+Add a **Condition** task after `get_token_usage`.
 
-### 3.1 Create a New Workflow
+Configure the condition to continue only when the first result contains more than 1,000 total tokens:
 
-1. Click **+ Workflow**
-2. Name it: `Daily AI Summary - {YOUR_ATTENDEE_ID}`
+{% raw %}
 
-### 3.2 Set Schedule Trigger
+```text
+{{ result("get_token_usage").records[0].total_tokens > 1000 }}
+```
 
-1. Select **Fix Time trigger**
-2. Configure: **Daily at 9:00 AM** (or your preferred time)
+{% endraw %}
 
-### 3.3 Add Comprehensive DQL Query
+> 💡 The threshold is deliberately low so that the condition can be tested during the workshop. It is not a recommended production threshold.
 
-Add a **Execute DQL query** task named `usage` with:
+### 4.2 Connect the tasks
 
-```sql
+The workflow should now follow this structure:
+
+```text
+Time interval trigger
+  └── get_token_usage
+      └── Condition: total_tokens > 1000
+```
+
+The notification task created in the next step should run only when the condition evaluates to `true`.
+
+### 4.3 Handle an empty result
+
+If the DQL task returns no records, the condition cannot access `records[0]`.
+
+Before running the workflow, confirm that:
+
+- The application generated recent traffic
+- The service name contains the correct attendee ID
+- The query timeframe includes that traffic
+- The pricing lookup contains the model value recorded in the spans
+
+---
+
+## Step 5: Add a Notification
+
+The available notification actions depend on the connections configured in the workshop environment.
+
+Use an **Email**, **Microsoft Teams**, or **Slack** action provided by the instructor.
+
+If no notification connection is available, you can still complete the workflow by reviewing the DQL and condition task results in the execution log.
+
+### 5.1 Add the notification task
+
+Add the selected notification action after the condition.
+
+Name the task:
+
+```text
+send_usage_alert
+```
+
+### 5.2 Configure the message
+
+Use the following content:
+
+{% raw %}
+
+```text
+AI usage notification
+
+Service: ai-chat-service-{YOUR_ATTENDEE_ID}
+Model: {{ result("get_token_usage").records[0]["gen_ai.response.model"] }}
+
+Token usage:
+- Requests: {{ result("get_token_usage").records[0].request_count }}
+- Input tokens: {{ result("get_token_usage").records[0].total_input_tokens }}
+- Output tokens: {{ result("get_token_usage").records[0].total_output_tokens }}
+- Total tokens: {{ result("get_token_usage").records[0].total_tokens }}
+
+Estimated model cost:
+${{ result("get_token_usage").records[0].estimated_cost_usd }}
+
+This notification was generated by the Dynatrace AI observability workshop.
+```
+
+{% endraw %}
+
+> The exact expression editor and field-access syntax can vary by workflow action. Use the expression suggestions displayed by the workflow editor to select values from `get_token_usage`.
+
+### 5.3 Add a subject if required
+
+For an email action, use:
+
+```text
+AI usage notification - {YOUR_ATTENDEE_ID}
+```
+
+For Microsoft Teams or Slack, use the same text as the message title if the action supports one.
+
+---
+
+## Step 6: Save and Test the Workflow
+
+### 6.1 Review the workflow
+
+Your completed workflow should look like:
+
+```text
+Time interval trigger
+  └── Execute DQL: get_token_usage
+      └── Condition: total_tokens > 1000
+          └── Notification: send_usage_alert
+```
+
+### 6.2 Save the workflow
+
+Select **Save draft** or the equivalent save option shown in the Workflows app.
+
+### 6.3 Run the workflow manually
+
+Select **Run**.
+
+A manual execution allows you to test the tasks without waiting for the scheduled trigger.
+
+### 6.4 Review the execution
+
+Open the workflow execution and inspect each task.
+
+Confirm that:
+
+1. `get_token_usage` completed successfully
+2. The DQL task returned at least one record
+3. The condition evaluated to `true` or `false`
+4. The notification ran only when the condition was `true`
+5. The execution completed without an unhandled error
+
+### 6.5 Test the false path
+
+Temporarily increase the condition to a value larger than your recorded token usage:
+
+{% raw %}
+
+```text
+{{ result("get_token_usage").records[0].total_tokens > 1000000 }}
+```
+
+{% endraw %}
+
+Run the workflow again.
+
+The condition should evaluate to `false`, and the notification task should not run.
+
+Restore the workshop threshold afterwards:
+
+{% raw %}
+
+```text
+{{ result("get_token_usage").records[0].total_tokens > 1000 }}
+```
+
+{% endraw %}
+
+This confirms that the workflow does not send a notification on every execution.
+
+---
+
+## Step 7: Extend the Workflow with a Usage Summary
+
+If time permits, add a second DQL task that identifies the operations consuming the most tokens.
+
+### 7.1 Add the query
+
+Create another **Execute DQL query** task named:
+
+```text
+get_usage_by_operation
+```
+
+Use:
+
+```dql
+// Token usage by operation
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.usage.input_tokens)
-| summarize 
-    total_input = sum(gen_ai.usage.input_tokens),
-    total_output = sum(gen_ai.usage.output_tokens),
-    avg_input = avg(gen_ai.usage.input_tokens),
-    avg_output = avg(gen_ai.usage.output_tokens),
-    max_input = max(gen_ai.usage.input_tokens),
+| summarize
+    total_input_tokens = sum(gen_ai.usage.input_tokens),
+    total_output_tokens = sum(gen_ai.usage.output_tokens),
+    avg_input_tokens = avg(gen_ai.usage.input_tokens),
+    avg_output_tokens = avg(gen_ai.usage.output_tokens),
+    maximum_input_tokens = max(gen_ai.usage.input_tokens),
     request_count = count(),
-  by: {span.name}
-| sort total_input + total_output desc
+    by: {span.name, gen_ai.response.model}
+| fieldsAdd total_tokens =
+    total_input_tokens + total_output_tokens
+| sort total_tokens desc
 | limit 10
 ```
 
-### 3.4 Add Summary Query
+### 7.2 Review the result
 
-Add another **Execute DQL query** task named `cost` with:
+Use the result to identify:
 
-```sql
-fetch spans
-| filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
-| filter isNotNull(gen_ai.usage.input_tokens)
-| summarize 
-    total_input = sum(gen_ai.usage.input_tokens),
-    total_output = sum(gen_ai.usage.output_tokens),
-    total_requests = count(),
-    avg_latency_ms = avg(duration) / 1000000
-| fieldsAdd estimated_daily_cost = (total_input * 2.50 + total_output * 10.00) / 1000000
-| fieldsAdd projected_monthly_cost = estimated_daily_cost * 30
-```
+- Which LLM operation consumed the most tokens
+- Whether input tokens or output tokens dominate
+- Whether one operation has an unusually high average
+- Whether a small number of requests generated most of the usage
 
-### 3.5 Send Daily Report
+Do not add token totals from parent workflow spans and child LLM spans unless both contain token attributes. The query deliberately includes only spans with `gen_ai.usage.input_tokens`.
 
-1. Add an **Email** -> **Send email** task
-3. Configure your message:
+---
 
-{% raw %}
-```
-📊 Daily AI Service Report - {YOUR_ATTENDEE_ID}
+## Bonus: Estimate Projected Usage Carefully
 
-═══════════════════════════════════════
-💰 COST SUMMARY
-═══════════════════════════════════════
-• Today's Estimated Cost: ${{ result("cost").records[0].estimated_daily_cost | round(4) }}
-• Projected Monthly Cost: ${{ result("cost").records[0].projected_monthly_cost | round(2) }}
+Projecting a short workshop sample over an entire month can produce a misleading result.
 
-═══════════════════════════════════════
-📈 USAGE METRICS
-═══════════════════════════════════════
-• Total Requests: {{ result("usage").records | map(attribute="request_count") | map("int") | sum }}
-• Total Input Tokens: {{ result("usage").records | map(attribute="total_input") | map("int") | sum }}
-• Total Output Tokens: {{ result("usage").records | map(attribute="total_output") | map("int") | sum }}
-• Avg Response Time: {{ result("cost").records[0].avg_latency_ms }}ms
+If you extend this workflow for a real service:
 
-```
-{% endraw %}
+1. Use a consistent reporting period.
+2. Confirm that traffic during that period is representative.
+3. Separate weekdays, weekends, and unusual traffic.
+4. Include the model identifier in the calculation.
+5. Keep prices in a lookup table rather than hardcoding them.
+6. Label projected values as estimates.
 
-### 3.6 Save and Run
-
-1. Click **Create/Save draft**
-2. Click **Run**
-
-</div>
+A simple multiplication of one workshop execution by 30 is not a reliable monthly forecast.
 
 ---
 
 ## ✅ Checkpoint
 
-Before completing this lab, verify:
+Before completing the lab, verify that:
 
-- [ ] Created a workflow
-- [ ] Set up notification
-- [ ] Tested workflow execution
-- [ ] Understood how Davis AI can trigger workflows
-- [ ] Know how to add conditions and notifications
+- [ ] You created `AI Usage Monitor - {YOUR_ATTENDEE_ID}`
+- [ ] The workflow uses a time interval trigger
+- [ ] `get_token_usage` executes successfully
+- [ ] The query loads `/lookups/ai/bedrock/model-costs`
+- [ ] The query calculates total input and output tokens
+- [ ] The query calculates an estimated cost
+- [ ] The condition references the result of `get_token_usage`
+- [ ] You tested both the true and false condition paths
+- [ ] You reviewed the workflow execution details
+- [ ] You configured a notification or reviewed why no connection was available
 
 ---
 
 ## 🆘 Troubleshooting
 
-### "Workflow not triggering"
+### The DQL task returns no records
 
-1. Verify the workflow is set to **Enabled**
-2. Check that your service is generating data
-3. For scheduled triggers, wait for the next scheduled run
-4. Use **Run** to test manually
+Check:
 
-### "DQL query returns no data"
+1. The attendee ID in the query
+2. The service name in Dynatrace
+3. The workflow query timeframe
+4. Whether the application generated recent requests
+5. Whether the spans contain `gen_ai.usage.input_tokens`
 
-1. Verify your service name matches exactly
-2. Check the time range in your query
-3. Ensure your application has processed requests recently
+Run this query in a Notebook:
 
-### "Notification not received"
+```dql
+fetch spans
+| filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
+| filter isNotNull(gen_ai.usage.input_tokens)
+| fields
+    timestamp,
+    span.name,
+    gen_ai.response.model,
+    gen_ai.usage.input_tokens,
+    gen_ai.usage.output_tokens
+| sort timestamp desc
+| limit 20
+```
 
-1. Verify the notification channel configuration
-2. Check for authentication/permission issues
-3. Test the notification channel independently
+### The lookup removes every record
+
+The filter:
+
+```dql
+| filter isNotNull(pricing.model)
+```
+
+removes models that were not matched by the lookup.
+
+Check the recorded model values:
+
+```dql
+fetch spans
+| filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
+| filter isNotNull(gen_ai.response.model)
+| summarize request_count = count(), by: {gen_ai.response.model}
+```
+
+Then inspect the lookup:
+
+```dql
+load "/lookups/ai/bedrock/model-costs"
+```
+
+The value in `gen_ai.response.model` must exist in the lookup table's `model` field.
+
+Expected values include:
+
+```text
+workshop-chat
+```
+
+and:
+
+```text
+us.amazon.nova-micro-v1:0
+```
+
+If a different value is recorded, the instructor must add that exact value to the lookup table.
+
+### The lookup table cannot be loaded
+
+Confirm that:
+
+1. The path is exactly:
+
+```text
+/lookups/ai/bedrock/model-costs
+```
+
+2. Your workshop account has `storage:files:read`.
+3. The lookup was uploaded successfully.
+4. The table is available in the same Dynatrace environment.
+
+### The condition fails with `records[0]`
+
+The DQL task returned no records.
+
+Run `get_token_usage` independently and resolve the missing-data or lookup issue before evaluating the condition.
+
+### The condition always evaluates to false
+
+Open the output of `get_token_usage` and note the value of:
+
+```text
+total_tokens
+```
+
+Set the workshop threshold below that value and run the workflow again.
+
+Do not leave an artificially low threshold in a production workflow.
+
+### The notification action is unavailable
+
+The notification connection may not be installed or configured in the workshop environment.
+
+You can still complete the core exercise by:
+
+1. Running the workflow manually
+2. Inspecting the DQL task result
+3. Confirming the condition result
+4. Reviewing which branch would have executed
+
+### The notification task fails
+
+Check:
+
+1. The selected connection
+2. The recipient or destination
+3. The expression references
+4. Whether `get_token_usage` returned a record
+5. Whether the workflow action has permission to use the connection
+
+Use the workflow execution details to identify which field failed.
+
+### The notification contains an empty model value
+
+The field name contains dots:
+
+```text
+gen_ai.response.model
+```
+
+Use bracket notation if the workflow expression editor does not accept dot notation:
+
+{% raw %}
+
+```text
+{{ result("get_token_usage").records[0]["gen_ai.response.model"] }}
+```
+
+{% endraw %}
+
+### The estimated cost appears as zero
+
+Nova Micro costs are very low, and the workshop produces few tokens. The value may be rounded when displayed.
+
+Inspect the raw `estimated_cost_usd` value or display more decimal places in the notification.
 
 ---
 
-## 🎓 What You've Learned
+## 🎓 What You Have Learned
 
 <div class="persona-box developer" markdown="1">
 
 ### 💻 Developer Takeaways
 
-You've built automation that watches your AI service:
+You can now:
 
-1. ✅ Create scheduled workflows that run DQL queries
-2. ✅ Set up token usage alerts with thresholds
-3. ✅ Configure notifications (Slack, Teams, Email)
-4. ✅ Add conditions to avoid alert noise
+1. Automate a DQL query for your AI service
+2. Monitor input and output token usage
+3. Trigger an action only after a threshold is exceeded
+4. Identify operations that consume the most tokens
+5. Use workflow execution details to troubleshoot automation
 
-**Sleep better:** Your workflow will alert you if token usage spikes — before users complain or the bill arrives.
+**Practical use:** schedule lightweight checks that highlight unusual growth in prompt size, model output, or request volume.
 
 </div>
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE/Platform Takeaways
+### 🔧 SRE and Platform Takeaways
 
-You're now the AI Cost Guardian:
+You can now:
 
-1. ✅ Build daily cost summary workflows
-2. ✅ Calculate projected monthly costs automatically
-3. ✅ Identify top token consumers by operation
-4. ✅ Trigger workflows from Davis AI problems
+1. Enrich telemetry with centrally maintained pricing data
+2. Calculate estimated model cost without hardcoding prices
+3. Configure conditional workflow execution
+4. Connect observability analysis to a notification action
+5. Test both positive and negative workflow paths
+6. Review workflow evidence before escalating an issue
 
-**Take back to your team:** These workflows are production-ready. Customize the thresholds and notification channels for your environment.
+**Practical use:** turn repeatable AI usage analysis into monitored operational processes.
 
 </div>
 
@@ -311,21 +641,25 @@ You're now the AI Cost Guardian:
 
 ## 🚀 Take It Further
 
-Ideas for production workflows:
+Ideas for extending the workshop workflow:
 
-| Workflow | Trigger | Action |
-|----------|---------|--------|
-| **Cost Circuit Breaker** | Token rate > limit | Disable endpoint temporarily |
-| **Model Fallback** | GPT-4 latency spike | Switch to GPT-4o-mini |
-| **Weekly Executive Report** | Schedule (Monday 8am) | Email summary to leadership |
-| **Prompt Injection Alert** | Unusual input patterns | Security team notification |
-| **SLA Violation** | P95 latency > 5s | Create incident + page on-call |
+| Workflow | Detection | Possible action |
+|---|---|---|
+| Token usage monitor | Token volume exceeds a reviewed threshold | Notify the service owner |
+| Large-prompt monitor | Average input tokens increase | Review prompts and retrieved context |
+| Output growth monitor | Average output tokens increase | Review response-length instructions |
+| LLM latency monitor | Model-call latency exceeds expectations | Investigate the gateway and provider call |
+| Simulated-error summary | Workshop error logs are detected | Send a training summary |
+| Weekly usage report | Scheduled reporting period completes | Send usage and cost estimates |
+| Lookup validation | An observed model has no pricing match | Notify the lookup-table owner |
+
+These examples require review and adaptation before production use.
 
 ---
 
 ## 🎉 Lab Complete!
 
-You've built automation that will save your team time and money. These workflows demonstrate the Dynatrace difference — not just observability, but **actionable automation**.
+You have created a workflow that retrieves AI telemetry, enriches it with pricing data, evaluates a token threshold, and conditionally runs a notification.
 
 <div class="lab-nav">
   <a href="lab3-dynatrace-mcp">← Lab 3: Dynatrace MCP</a>

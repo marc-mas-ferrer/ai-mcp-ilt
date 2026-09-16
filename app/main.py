@@ -116,7 +116,8 @@ from pydantic import BaseModel
 from typing import Optional, List
 import chromadb
 from chromadb.config import Settings
-from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from langchain_openai import ChatOpenAI
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
@@ -128,12 +129,16 @@ ATTENDEE_ID = os.getenv("ATTENDEE_ID", "workshop-attendee")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
 
-# Azure OpenAI Configuration
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
-AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
-AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
-AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+# LLM Gateway Configuration (LiteLLM -> Amazon Bedrock)
+LLM_BASE_URL        = os.getenv("LLM_BASE_URL")
+LLM_API_KEY         = os.getenv("LLM_API_KEY")
+LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "workshop-chat")
+
+# Embeddings run locally in the container (see 2.1b) - no credential needed
+LOCAL_EMBEDDING_MODEL = os.getenv(
+    "LOCAL_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
+
 
 # Lifespan event handler (replaces deprecated @app.on_event)
 @asynccontextmanager
@@ -332,7 +337,7 @@ SIMULATED_ERRORS = [
     },
     {
         "exception": LLMResponseError,
-        "message": "Azure OpenAI returned malformed JSON in function call response",
+        "message": "The LLM gateway returned a malformed response",
         "log_level": "error",
         "error_code": "LLM_MALFORMED_RESPONSE"
     },
@@ -447,7 +452,7 @@ def generate_context(docs: list) -> str:
         return "No relevant context found."
     return format_docs(docs)
 
-# Extended system prompt for Azure OpenAI prompt caching (requires 1,024+ tokens)
+# Extended system prompt used to provide workshop-specific guidance
 RAG_SYSTEM_PROMPT = """You are an expert AI assistant for the Dynatrace AI Observability Workshop, 
 specializing in application performance monitoring, distributed tracing, and AI/LLM observability.
 You provide accurate, helpful, and technically detailed responses about observability, monitoring,
@@ -487,7 +492,7 @@ Dynatrace fully supports the OpenTelemetry standard for collecting telemetry dat
 ### 3. AI/LLM Observability with OpenLLMetry
 OpenLLMetry (by Traceloop) extends OpenTelemetry for AI/ML workloads:
 
-- **Automatic instrumentation**: Works with LangChain, OpenAI, Azure OpenAI, Anthropic, Cohere
+- **Automatic instrumentation**: Works with popular LLM frameworks, providers, and vector stores
 - **Token tracking**: Monitor prompt tokens, completion tokens, and total usage
 - **Latency measurement**: Track response times for LLM and embedding calls
 - **Vector database tracing**: ChromaDB, Pinecone, Weaviate, Milvus query visibility
@@ -507,7 +512,7 @@ LangChain is a popular framework for building LLM applications:
 - **Text splitters**: Chunk documents for embedding and retrieval
 - **Vector stores**: Integration with ChromaDB, Pinecone, Weaviate, FAISS
 - **Retrievers**: Query vector stores with semantic search
-- **Chat models**: Interface with OpenAI, Azure OpenAI, Anthropic, local models
+- **Chat models**: Interface with hosted and local language models
 - **Embeddings**: Generate vector representations of text
 - **Prompt templates**: Reusable, parameterized prompts
 - **Output parsers**: Structure LLM responses into typed objects
@@ -515,21 +520,7 @@ LangChain is a popular framework for building LLM applications:
 - **Agents**: LLM-powered decision making and tool use
 - **Callbacks**: Hook into chain execution for logging and monitoring
 
-### 5. Azure OpenAI Service
-Microsoft's enterprise-grade LLM platform with unique capabilities:
-
-- **Model availability**: GPT-4, GPT-4o, GPT-4o-mini, GPT-3.5-Turbo
-- **Embedding models**: text-embedding-ada-002, text-embedding-3-small, text-embedding-3-large
-- **API versioning**: Use stable or preview versions for new features
-- **Prompt caching**: Reduce costs and latency with cached prompt prefixes (1024+ tokens)
-- **Content filtering**: Built-in responsible AI content moderation
-- **Private endpoints**: VNet integration for secure connectivity
-- **Managed identity**: Azure AD authentication without API keys
-- **Regional deployment**: Choose regions for data residency and latency
-- **Provisioned throughput**: Reserved capacity for predictable performance
-- **Fine-tuning**: Customize models with your own training data
-
-### 6. Workshop Lab Topics
+### 5. Workshop Lab Topics
 This workshop covers hands-on exercises in AI observability:
 
 - **Lab 0 - Environment Setup**: Configure GitHub Codespaces, install dependencies, set environment variables
@@ -569,7 +560,7 @@ def generate_response(question: str, context: str) -> str:
     # Use chat messages format for cleaner trace capture
     from langchain_core.messages import SystemMessage, HumanMessage
     
-    # Use extended system prompt (1,024+ tokens enables Azure OpenAI prompt caching)
+    # Build the system prompt with the retrieved context
     system_prompt = RAG_SYSTEM_PROMPT.format(context=context)
     
     messages = [
@@ -614,13 +605,11 @@ def initialize_rag():
     global embeddings, vectorstore, qa_chain, retriever, llm
     
     try:
-        # Initialize Azure OpenAI embeddings
-        embeddings = AzureOpenAIEmbeddings(
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            api_key=AZURE_OPENAI_API_KEY,
-            azure_deployment=AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
-            api_version=AZURE_OPENAI_API_VERSION
+        # Initialize the local embedding model
+        embeddings = HuggingFaceEmbeddings(
+            model_name=LOCAL_EMBEDDING_MODEL
         )
+
         
         # Create text splitter
         text_splitter = RecursiveCharacterTextSplitter(
@@ -641,15 +630,14 @@ def initialize_rag():
         # Create retriever
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         
-        # Initialize Azure OpenAI LLM (stored globally for reuse)
-        llm = AzureChatOpenAI(
-            azure_endpoint=AZURE_OPENAI_ENDPOINT,
-            api_key=AZURE_OPENAI_API_KEY,
-            azure_deployment=AZURE_OPENAI_CHAT_DEPLOYMENT,
-            api_version=AZURE_OPENAI_API_VERSION,
+        # Initialize OpenAI LLM (stored globally for reuse)
+        llm = ChatOpenAI(
+            model=LLM_CHAT_MODEL,
+            api_key=LLM_API_KEY,
+            base_url=LLM_BASE_URL,
             temperature=0.7,
-            model=AZURE_OPENAI_CHAT_DEPLOYMENT
         )
+
         
         # Create prompt template (uses extended system prompt for caching)
         prompt = ChatPromptTemplate.from_template(RAG_SYSTEM_PROMPT + "\n\nQuestion: {question}\n\nAnswer:")
@@ -664,10 +652,11 @@ def initialize_rag():
         
         logger.info("RAG system initialized successfully", extra={
             "attendee_id": ATTENDEE_ID,
-            "embedding_model": AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
-            "chat_model": AZURE_OPENAI_CHAT_DEPLOYMENT,
+            "embedding_model": LOCAL_EMBEDDING_MODEL,
+            "chat_model": LLM_CHAT_MODEL,
             "document_count": len(SAMPLE_DOCUMENTS)
         })
+
         print(f"✅ RAG initialized successfully for attendee: {ATTENDEE_ID}")
         return True
         
@@ -787,14 +776,13 @@ async def chat(request: ChatRequest):
             })
         else:
             # Direct LLM call (single LLM span)
-            direct_llm = AzureChatOpenAI(
-                azure_endpoint=AZURE_OPENAI_ENDPOINT,
-                api_key=AZURE_OPENAI_API_KEY,
-                azure_deployment=AZURE_OPENAI_CHAT_DEPLOYMENT,
-                api_version=AZURE_OPENAI_API_VERSION,
+            direct_llm = ChatOpenAI(
+                model=LLM_CHAT_MODEL,
+                api_key=LLM_API_KEY,
+                base_url=LLM_BASE_URL,
                 temperature=0.7,
-                model=AZURE_OPENAI_CHAT_DEPLOYMENT
             )
+
             response = direct_llm.invoke(request.message)
             response_text = response.content
             sources = None

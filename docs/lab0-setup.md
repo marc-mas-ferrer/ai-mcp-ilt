@@ -8,224 +8,420 @@ nav_order: 2
 
 **Duration:** ~15 minutes
 
-In this lab, you'll set up your workshop environment using GitHub Codespaces and configure the necessary credentials.
+In this lab, you will launch your GitHub Codespace, configure the credentials provided by your instructor, and verify that the sample RAG application works before adding observability instrumentation.
 
 ---
 
 ## 📋 Prerequisites
 
-Before starting, ensure you have:
-- ✅ A GitHub account
-- ✅ Dynatrace credentials (provided by your instructor)
-- ✅ Access to this workshop repository
+Before starting, make sure you have:
+
+- ✅ A GitHub account with Codespaces access
+- ✅ The workshop credentials provided by your instructor
+- ✅ Access to the workshop repository
+- ✅ Login access to the Dynatrace workshop environment
 
 ---
 
 ## 🏷️ Set Your Attendee ID
 
-Before proceeding, **set your Attendee ID in the sidebar** (on the left side of this page). This will automatically personalize all code examples and commands throughout the workshop labs.
+Before starting the lab, set your attendee ID in the sidebar on the left side of this page.
 
-1. Look for the **"Your Attendee ID"** input field in the sidebar
-2. Enter your attendee ID (e.g., your name or initials like `sudosmitty`)
-3. Click **Set** or press Enter
+Your attendee ID personalises the commands and DQL queries throughout the workshop.
 
-> **💡 Tip:** Your attendee ID is stored in your browser and will persist across all lab pages. You'll see `{YOUR_ATTENDEE_ID}` placeholders replaced with your actual ID throughout the documentation.
+1. Find the **Your Attendee ID** field in the sidebar.
+2. Enter a short identifier using lowercase letters, numbers, or hyphens.
+3. Select **Set** or press Enter.
+
+For example:
+
+```text
+mmas
+```
+
+> 💡 **Tip:** Use a short, unique identifier without spaces. The workshop uses it to create your service name:
+>
+> `ai-chat-service-{YOUR_ATTENDEE_ID}`
 
 ---
 
-## Step 1: Launch GitHub Codespace
+## Step 1: Launch Your GitHub Codespace
 
-1. If you haven't already, click the button below to launch your personal workshop environment:
+### 1.1 Open the workshop environment
 
-   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/sudosmitty/dynatrace-ai-mcp-workshop?quickstart=1){:target="_blank" rel="noopener noreferrer"}
+Select the button below:
 
-2. Wait for the Codespace to build (this takes 2-3 minutes on first launch)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/marc-mas-ferrer/ai-mcp-ilt?quickstart=1){:target="_blank" rel="noopener noreferrer"}
 
-3. Once ready, you'll see VS Code in your browser with the workshop files
+### 1.2 Create the Codespace
 
-> **💡 Important:** Each attendee gets their own **isolated Codespace**. All your code changes stay within your Codespace and won't affect other workshop participants. No need to fork or create branches!
+On the GitHub Codespaces page:
 
----
+1. Keep the default repository configuration.
+2. Select **Create codespace**.
+3. Wait for the Codespace to finish building.
+4. Confirm that VS Code opens in your browser.
+5. Wait until the setup process in the terminal has finished.
 
-## Step 2: Configure Workshop Credentials
-
-After the Codespace starts, you'll need to configure credentials.
-
-### 2.1 Run the Setup Script
-
-In the open VS Code terminal run:
-
-```bash
-bash .devcontainer/fetch-secrets.sh
-```
-
-### 2.2 Enter Your Credentials
-
-You'll be prompted for:
-1. **Attendee ID** - Enter your ATTENDEE_ID (e.g., `{YOUR_ATTENDEE_ID}`)
-2. **Workshop Token** - Your instructor will provide this
-
-```
-🔐 Workshop Credentials Setup
-
-Enter your attendee ID (e.g., your name or initials, no spaces) [press enter to generate]: {YOUR_ATTENDEE_ID}
-✅ Attendee ID: {YOUR_ATTENDEE_ID}
-
-Enter your workshop token: *INSTRUCTOR PROVIDED*
-✅ Azure OpenAI credentials configured!
-```
-
-### 2.3 Load Your Credentials
-
-You will need to load your credentials into the terminal session with the following command:
-```bash
-source ~/.bashrc
-```
-
-Then reload VS Code:
-
-1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
-2. Run: **Developer: Reload Window**
+> 💡 **Important:** Each attendee gets an isolated Codespace. Changes made in your Codespace do not modify the workshop repository or affect other attendees.
 
 ---
 
-## Step 3: Configure Dynatrace Credentials
+## Step 2: Configure Your Workshop Credentials
 
-Your Attendee ID and Azure OpenAI credentials are now configured as environment variables. You just need to add your Dynatrace credentials.
+Your instructor will provide the values required by the application.
 
-### 3.1 Open the Environment File
+These include:
 
-1. In the VS Code Explorer, locate and open the `.env` file in the root directory
+- Your attendee ID
+- The LiteLLM gateway URL
+- The LiteLLM workshop key
+- The Dynatrace OTLP endpoint
+- The Dynatrace ingest token
+- The Dynatrace MCP platform token
 
-2. You'll see it only contains placeholders for Dynatrace credentials
+### 2.1 Open the `.env` file
 
-### 3.2 Add Dynatrace Credentials
+In the VS Code Explorer:
 
-Your instructor will provide the following values. Enter them in your `.env` file:
+1. Locate the `.env` file in the root of the repository.
+2. Open the file.
+3. Replace the empty values with those provided by your instructor.
+
+Your `.env` file should have this structure:
 
 ```bash
-# Dynatrace Configuration - Get these from your instructor
+# Your unique workshop identifier
+ATTENDEE_ID={YOUR_ATTENDEE_ID}
+
+# LLM gateway
+LLM_BASE_URL=http://18.118.23.218:4000/v1
+LLM_API_KEY=sk-workshop-INSTRUCTOR_PROVIDED_VALUE
+LLM_CHAT_MODEL=workshop-chat
+
+# Dynatrace OTLP ingestion
 DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
-DT_API_TOKEN=dt0c01.XXXXXXXXXX.YYYYYYYYYYYYYYYY
+DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED_VALUE
+
+# Dynatrace MCP
+DT_MCP_BEARER_TOKEN=dt0s16.INSTRUCTOR_PROVIDED_VALUE
 ```
 
-### 3.3 Verify Configuration
+> ⚠️ **Important:** Do not add quotation marks around the values. Do not add spaces before or after `=`.
 
-Your complete `.env` file should look like this:
+### 2.2 Check the endpoint formats
+
+Confirm the following:
+
+- `LLM_BASE_URL` ends with `/v1`
+- `DT_ENDPOINT` ends with `/api/v2/otlp`
+- `LLM_CHAT_MODEL` is `workshop-chat`
+- `ATTENDEE_ID` matches the value you entered in the workshop sidebar
+
+### 2.3 Save the file
+
+Save `.env` using:
+
+- `Cmd+S` on macOS
+- `Ctrl+S` on Windows or Linux
+
+---
+
+## Step 3: Apply the Configuration
+
+The application can load `.env` directly, but VS Code also needs the MCP token in its environment before Lab 3.
+
+### 3.1 Run the configuration script
+
+From the repository root, run:
 
 ```bash
-# Dynatrace Configuration
-DT_ENDPOINT=https://abc12345.live.dynatrace.com/api/v2/otlp
-DT_API_TOKEN=dt0c01.EXAMPLE_TOKEN_HERE
+bash .devcontainer/configure.sh
 ```
 
-> **ℹ️ Note:** Azure OpenAI credentials and your Attendee ID are stored as environment variables (not in the `.env` file) for security.
+The script validates the required values, configures the Dynatrace MCP token, and makes the workshop variables available to new terminal sessions.
 
-To verify your environment variables are set, run in the terminal:
+Expected output includes:
+
+```text
+✅ MCP token configured
+✅ Attendee ID: {YOUR_ATTENDEE_ID}
+```
+
+If the script reports an empty value, return to `.env`, complete the missing field, save the file, and run the script again.
+
+### 3.2 Reload VS Code
+
+After the script completes:
+
+1. Press `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows.
+2. Search for **Developer: Reload Window**.
+3. Select the command.
+4. Wait for VS Code to reload.
+
+This allows VS Code and GitHub Copilot to read the updated MCP configuration.
+
+### 3.3 Open a new terminal
+
+After the reload:
+
+1. Open **Terminal**.
+2. Select **New Terminal**.
+3. Run:
 
 ```bash
 echo "Attendee: $ATTENDEE_ID"
-echo "Azure OpenAI: ${AZURE_OPENAI_ENDPOINT:+configured}"
+echo "LLM gateway: $LLM_BASE_URL"
+echo "LLM model: $LLM_CHAT_MODEL"
+echo "Dynatrace endpoint: $DT_ENDPOINT"
 ```
+
+Expected result:
+
+```text
+Attendee: {YOUR_ATTENDEE_ID}
+LLM gateway: http://18.118.23.218:4000/v1
+LLM model: workshop-chat
+Dynatrace endpoint: https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
+```
+
+The command intentionally does not print any token values.
 
 ---
 
-## Step 3: Verify the Sample Application
+## Step 4: Verify the Sample Application
 
-Let's make sure everything is working before we add instrumentation.
+Before adding instrumentation, confirm that the RAG application can start and communicate with the LLM gateway.
 
-### 3.1 Start the Application
+### 4.1 Start the application
 
-In your VS Code terminal, run:
+From the repository root, run:
 
 ```bash
 python app/main.py
 ```
 
-### 3.2 Expected Output
+### 4.2 Check the startup output
 
 You should see output similar to:
 
-```
+```text
 ╔══════════════════════════════════════════════════════════════════════╗
-║         🚀 AI Chat Service Starting...                               ║
-║                                                                      ║
-║         Attendee ID: {YOUR_ATTENDEE_ID}                                          ║
-║         Service: ai-chat-service-{YOUR_ATTENDEE_ID}                              ║
+║         🚀 AI Chat Service Starting...                              ║
+║                                                                     ║
+║         Attendee ID: {YOUR_ATTENDEE_ID}                             ║
+║         Service: ai-chat-service-{YOUR_ATTENDEE_ID}                 ║
 ╚══════════════════════════════════════════════════════════════════════╝
 
 ✅ RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO: Uvicorn running on http://0.0.0.0:8000
 ```
 
-### 3.3 Test the Application
+The first start may take longer because the local embedding model must be downloaded into the Codespace.
 
-1. When the application starts, VS Code will show a popup about port 8000. Click **"Open in Browser"**
+The application uses:
 
-2. You should see the **AI Chat Interface** - a beautiful web UI for chatting with the AI assistant!
+- Amazon Nova Micro through the LiteLLM gateway for chat completions
+- `sentence-transformers/all-MiniLM-L6-v2` locally for embeddings
+- ChromaDB for vector search
 
-3. Try sending a message like:
-   > "What is Dynatrace?"
+### 4.3 Open the chat interface
 
-4. You should receive an AI-generated response in the chat!
+When the application starts, VS Code should detect port `8000`.
 
-> **💡 Tip:** If you miss the popup, click the **Ports** tab in VS Code, find port 8000, and click the 🌐 globe icon.
+1. Select **Open in Browser** in the port notification.
+2. If the notification does not appear, open the **Ports** tab.
+3. Find port `8000`.
+4. Select the globe icon.
 
-### 3.4 Stop the Application
+### 4.4 Test the application with RAG enabled
 
-Press `Ctrl+C` in the terminal to stop the application.
+In the chat interface, make sure **Use Knowledge Base (RAG)** is enabled.
+
+Send:
+
+```text
+What is Dynatrace?
+```
+
+You should receive:
+
+- An AI-generated response
+- A list of knowledge-base sources below the response
+- Your attendee ID displayed in the interface
+
+### 4.5 Test the application without RAG
+
+Disable **Use Knowledge Base (RAG)** and send:
+
+```text
+What is OpenTelemetry?
+```
+
+You should receive another AI-generated response, this time without retrieving context from the local knowledge base.
+
+Both modes must work before continuing.
+
+### 4.6 Stop the application
+
+Return to the terminal and press:
+
+```text
+Ctrl+C
+```
 
 ---
 
 ## ✅ Checkpoint
 
-Before proceeding to Lab 1, verify:
+Before proceeding to Lab 1, verify that:
 
-- [ ] You've set your **Attendee ID in the sidebar** (code examples should show your ID, not `{YOUR_ATTENDEE_ID}`)
+- [ ] Your attendee ID is set in the workshop sidebar
 - [ ] Your Codespace is running
-- [ ] The `.env` file has the `DT_ENDPOINT` and `DT_API_TOKEN` from your instructor
-- [ ] The sample application starts without errors
-- [ ] You can access the application in your browser
-- [ ] The chat endpoint responds with AI-generated text
+- [ ] The `.env` file contains all instructor-provided values
+- [ ] `LLM_BASE_URL` ends with `/v1`
+- [ ] `DT_ENDPOINT` ends with `/api/v2/otlp`
+- [ ] `.devcontainer/configure.sh` completes successfully
+- [ ] You reloaded the VS Code window
+- [ ] The application starts without errors
+- [ ] The local embedding model loads successfully
+- [ ] The chat works with RAG enabled
+- [ ] The chat works with RAG disabled
 
 ---
 
 ## 🆘 Troubleshooting
 
-### "Azure OpenAI credentials not found"
+### `.env` does not exist
 
-If you skipped entering the workshop token during Codespace creation:
-1. Get the workshop token from your instructor
-2. Run: `bash .devcontainer/fetch-secrets.sh`
-3. Enter the workshop token when prompted
+Run:
 
-### "Invalid workshop token"
+```bash
+bash .devcontainer/setup.sh
+```
 
-1. Double-check you've entered the token correctly
-2. Make sure there are no extra spaces
-3. Ask your instructor to verify the token is correct
+Then open the newly created `.env` file and enter the instructor-provided values.
 
-### Missing or wrong ATTENDEE_ID
+### `configure.sh` reports an empty variable
 
-If you skipped the Attendee ID prompt or want to change it:
-1. Open the `.env` file
-2. Add an `ATTENDEE_ID={YOUR_ATTENDEE_ID}` line
+Open `.env` and confirm that every required field contains a value.
 
-### "Connection refused" on port 8000
+Check the variable names carefully:
 
-1. Make sure the application is running
-2. Check that port 8000 is being forwarded (look in the Ports tab)
+```text
+ATTENDEE_ID
+LLM_BASE_URL
+LLM_API_KEY
+LLM_CHAT_MODEL
+DT_ENDPOINT
+DT_API_TOKEN
+DT_MCP_BEARER_TOKEN
+```
 
-### Application crashes on startup
+Save the file and run:
 
-1. Check your `.env` file for typos
-2. Ensure all dependencies are installed: `pip install -r app/requirements.txt`
+```bash
+bash .devcontainer/configure.sh
+```
+
+### `configure.sh` cannot be executed
+
+Run it explicitly with Bash:
+
+```bash
+bash .devcontainer/configure.sh
+```
+
+If required, make it executable:
+
+```bash
+chmod +x .devcontainer/configure.sh
+```
+
+### The LLM gateway cannot be reached
+
+Confirm that:
+
+1. `LLM_BASE_URL` is exactly the value provided by the instructor.
+2. The URL ends with `/v1`.
+3. The application is running inside the GitHub Codespace.
+4. The workshop gateway is running.
+
+The gateway uses port `4000`. Some corporate networks block this port from local computers, but the application runs from the Codespace rather than from your local computer.
+
+### Authentication fails or `No connected db` appears
+
+This usually means that `LLM_API_KEY` does not match the gateway key.
+
+1. Copy the key again from the instructor-provided credentials.
+2. Check for missing or additional characters.
+3. Do not add quotes around the value.
+4. Save `.env`.
+5. Run `bash .devcontainer/configure.sh` again.
+6. Restart the application.
+
+### RAG initialisation fails
+
+Check the complete terminal error.
+
+Then verify that the local embedding dependencies are installed:
+
+```bash
+python -c "from langchain_huggingface import HuggingFaceEmbeddings; print('Local embeddings available')"
+```
+
+If the import fails, run:
+
+```bash
+pip install -r app/requirements.txt
+```
+
+Then restart the application:
+
+```bash
+python app/main.py
+```
+
+### Port 8000 does not open
+
+1. Confirm that the application is still running.
+2. Open the **Ports** tab in VS Code.
+3. Confirm that port `8000` is listed.
+4. Select the globe icon next to port `8000`.
+
+### The application reports an incorrect attendee ID
+
+1. Stop the application.
+2. Open `.env`.
+3. Correct `ATTENDEE_ID`.
+4. Save the file.
+5. Run:
+
+```bash
+bash .devcontainer/configure.sh
+```
+
+6. Open a new terminal.
+7. Restart the application.
+
+### Dynatrace configuration is not detected
+
+Confirm that `.env` contains:
+
+```bash
+DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
+DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED_VALUE
+```
+
+The ingest token must start with `dt0c01` and have the permissions configured by the instructor.
 
 ---
 
 ## 🎉 Great Job!
 
-Your environment is ready! Let's move on to adding AI observability instrumentation.
+Your Codespace, LLM gateway, local embedding model, and Dynatrace configuration are ready.
+
+In Lab 1, you will add OpenLLMetry instrumentation and begin sending AI traces to Dynatrace.
 
 <div class="lab-nav">
   <a href="./">← Home</a>

@@ -134,6 +134,6 @@ Do not modify without good reason:
 
 ## Key URLs
 
-- Workshop Guide: https://sudosmitty.github.io/dynatrace-ai-mcp-workshop
+- Workshop Guide: https://marc-mas-ferrer.github.io/ai-mcp-ilt
 - Secrets Server: https://workshop-secrets-server.azurewebsites.net
-- Codespace: https://codespaces.new/sudosmitty/dynatrace-ai-mcp-workshop?quickstart=1
+- Codespace: https://codespaces.new/marc-mas-ferrer/ai-mcp-ilt?quickstart=1

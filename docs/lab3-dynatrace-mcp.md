@@ -4,115 +4,200 @@ title: Lab 3 - Dynatrace MCP
 nav_order: 5
 ---
 
-# 🤖 Lab 3: Using Dynatrace MCP for Agentic AI
+# 🤖 Lab 3: Investigating AI Services with Dynatrace MCP
 
 **Duration:** ~30 minutes
 
-In this lab, you'll configure and use the Dynatrace MCP (Model Context Protocol) server to interact with Dynatrace directly from your IDE using AI assistants like GitHub Copilot.
+In this lab, you will use Dynatrace MCP from GitHub Copilot in VS Code to investigate the AI service instrumented in the previous labs.
+
+Instead of switching between your code and the Dynatrace interface, you will ask questions about traces, token usage, latency, and simulated errors directly from your development environment.
 
 ---
 
 ## 🎯 Learning Objectives
 
-- Understand what MCP is and how it enables agentic AI
-- Install and configure the Dynatrace MCP server
-- Use natural language to query Dynatrace from VS Code
-- Analyze problems and traces using AI assistance
-- Explore real-world use cases for observability-driven AI
+By the end of this lab, you will be able to:
+
+- Explain how MCP connects an AI assistant with Dynatrace
+- Verify the Dynatrace MCP connection in VS Code
+- Query telemetry for your attendee-specific service
+- Investigate LLM token usage and RAG latency
+- Generate and analyse simulated application errors
+- Ask Dynatrace MCP to create DQL for further investigation
+- Improve MCP requests by adding precise scope and context
 
 ---
 
-## What is MCP?
+## What Is MCP?
 
-**Model Context Protocol (MCP)** is an open standard that allows AI assistants to interact with external tools and data sources. With Dynatrace MCP, you can:
+**Model Context Protocol**, or MCP, is an open protocol that allows an AI assistant to work with external tools and data sources.
 
-- Query Dynatrace using natural language
-- Analyze problems and incidents
-- Retrieve metrics, traces, and logs
-- Get AI-powered insights about your applications
+In this workshop, GitHub Copilot can use Dynatrace MCP tools to access permitted data from the workshop environment.
 
-Think of it as giving your AI assistant **direct access to Dynatrace**!
+This allows you to:
+
+- Query spans and logs
+- Analyse token usage
+- Review service latency
+- Investigate application errors
+- Generate DQL queries
+- Continue an investigation without leaving VS Code
+
+> MCP access is limited by the permissions assigned to the Dynatrace platform token configured by the instructor.
 
 <div class="why-dynatrace" markdown="1">
 
-## 🏆 Why Dynatrace MCP is Different
+## 🏆 Why Connect an AI Assistant to Dynatrace?
 
-Other tools let you *see* traces. Dynatrace MCP lets you:
+| Without Dynatrace MCP | With Dynatrace MCP |
+|---|---|
+| Manually navigate between tools | Investigate from the IDE |
+| Write every query from scratch | Request and refine DQL using natural language |
+| Copy telemetry into the conversation | Allow the assistant to retrieve permitted data |
+| Start every search independently | Continue with contextual follow-up questions |
+| Manually prepare investigation summaries | Ask for a summary based on retrieved evidence |
 
-| Capability | Basic AI Assistants | Dynatrace MCP |
-|------------|---------------------|---------------|
-| Query observability data | ❌ No access | ✅ Natural language queries |
-| Correlate AI + infrastructure | ❌ Separate tools | ✅ Unified view via Davis AI |
-| Root cause analysis | ❌ You investigate | ✅ Davis AI explains issues |
-| Take action | ❌ Copy/paste to other tools | ✅ Trigger workflows from IDE |
-| Business context | ❌ Technical data only | ✅ Link tokens to user impact |
-
-**The difference:** Ask "Why is my AI service slow?" and get answers that connect LLM latency to Azure region issues to user experience — all in one response.
+MCP does not replace observability expertise. It helps you retrieve and analyse evidence more efficiently.
 
 </div>
 
 ---
 
-## Step 1: Configure the Dynatrace MCP Server
+## Step 1: Verify the MCP Configuration
 
-The Dynatrace MCP server is already pre-configured in this workshop! The authentication token was automatically configured when you ran the setup script in Lab 0.
+The Dynatrace MCP server is already defined in:
+
+```text
+.vscode/mcp.json
+```
+
+The authentication token was configured when you ran:
+
+```bash
+bash .devcontainer/configure.sh
+```
+
+during Lab 0.
+
+### 1.1 Check the configuration file
+
+Open:
+
+```text
+.vscode/mcp.json
+```
+
+Confirm that it contains a server named:
+
+```text
+Dynatrace-MCP
+```
+
+The authorisation header should reference the environment variable rather than contain the token directly:
+
+```json
+"Authorization": "Bearer ${env:DT_MCP_BEARER_TOKEN}"
+```
+
+> ⚠️ Do not paste the platform token directly into `.vscode/mcp.json`. Do not share or commit the token.
+
+### 1.2 Validate the JSON
+
+Run:
+
+```bash
+python -m json.tool .vscode/mcp.json
+```
+
+The command should print the formatted JSON without an error.
+
+### 1.3 Reload VS Code
+
+If you changed `.env`, ran `configure.sh`, or edited `.vscode/mcp.json`:
+
+1. Press `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows.
+2. Run **Developer: Reload Window**.
+3. Wait for VS Code to reload.
+
+The reload allows GitHub Copilot to read the updated MCP configuration and environment variable.
 
 ---
 
-## Step 2: Verify MCP Connection
+## Step 2: Verify the Dynatrace MCP Connection
 
 ### 2.1 Open GitHub Copilot Chat
 
-1. Click on the Copilot icon on the top bar
-2. Or use keyboard shortcut: `Cmd+Shift+I` (Mac) / `Ctrl+Shift+I` (Windows)
+Open GitHub Copilot Chat from the VS Code toolbar.
 
-### 2.2 Test the Connection
+If your Copilot interface provides an agent-mode selector, switch to **Agent** mode so that Copilot can use MCP tools.
 
-In the Copilot chat, type:
+### 2.2 Check the available tools
 
+Open the Copilot tools picker and confirm that tools from `Dynatrace-MCP` are available and enabled.
+
+The exact tool names displayed can vary with the Dynatrace MCP version.
+
+### 2.3 Run a simple test
+
+Enter:
+
+```text
+Use Dynatrace MCP to list the services with telemetry in the last hour.
 ```
-@dynatrace What services are available in my environment?
+
+When Copilot requests permission to use a Dynatrace MCP tool, review the proposed action and allow it.
+
+A successful response should contain data retrieved from the workshop environment.
+
+> If `@dynatrace` is recognised in your Copilot version, you may use it. If it is not recognised, use Agent mode and explicitly write “Use Dynatrace MCP”.
+
+### 2.4 Scope the investigation to your service
+
+Run:
+
+```text
+Use Dynatrace MCP to find telemetry from the last hour for the service
+ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Tell me which data source and time range you queried.
 ```
 
-If configured correctly, Copilot will query Dynatrace and return a list of services!
+The service name must exactly match the attendee ID configured in `.env`.
 
 ---
 
-# 🎭 New! Dynatrace Intelligence ✨
+## 🎭 Choose Your Investigation
 
-Dynatrace Intelligence provides agentic workflows that go beyond simple queries. These exercises showcase the latest capabilities for each persona. What this means is that with Dynatrace's MCP server, your personal AI agent (GitHub CoPilot for this lab) can actually interact with various agents provided by Dynatrace! When running the below queries, notice how your AI agent will interact with various agents from Dynatrace (e.g. Grail Query Agent, Data Analysis Agent, Root Cause Agent, etc.).
-
-Learn more here:
-* [Dynatrace Intelligence - Announcement](https://www.dynatrace.com/news/blog/dynatrace-intelligence-at-the-core-of-autonomous-operations/)
-* [Dynatrace Intelligence - Documentation](https://docs.dynatrace.com/docs/shortlink/dynatrace-intelligence-landing)
-
----
-
-## 🎭 Your Mission (Choose Your Persona)
-
-From this point forward, you'll focus on different use cases depending on your role.
+The next exercises examine the same service from two perspectives.
 
 <div class="persona-box developer" markdown="1">
 
-### 💻 Developer: "I want to debug without leaving my IDE"
+### 💻 Developer: Investigate a RAG request from the IDE
 
-**Your story:** You're deep in code, fixing a bug in your RAG pipeline. Every time you need performance data, you have to context-switch to Dynatrace. What if you could just *ask*?
+Your goal is to understand:
 
-**Your goal:** Set up MCP so you can query Dynatrace directly from VS Code. Debug while you code!
+- Which stages make up the RAG request
+- Which operation takes the most time
+- How token use differs between LLM calls
+- What evidence is available when an error occurs
 
-**Focus on:** Steps 3 and 4 (marked with 💻)
+**Focus on:** Steps 3 and 4.
 
 </div>
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE/Platform: "I need faster incident response"
+### 🔧 SRE or Platform Engineer: Triage service behaviour
 
-**Your story:** It's 2 AM and you get paged. Instead of fumbling through dashboards half-asleep, what if you could just ask about the issue?
+Your goal is to determine:
 
-**Your goal:** Learn to use MCP for rapid incident triage. Get answers in seconds, not minutes.
+- How much traffic the service generated
+- How many input and output tokens were used
+- Which operations contribute the most latency
+- Which simulated errors occurred
+- How to summarise the evidence for another team
 
-**Focus on:** Steps 5 and 6 (marked with 🔧)
+**Focus on:** Steps 5 and 6.
 
 </div>
 
@@ -120,130 +205,188 @@ From this point forward, you'll focus on different use cases depending on your r
 
 <div class="persona-box developer" markdown="1">
 
-## 💻 Step 3: Query Your AI Service (Developer)
+## 💻 Step 3: Investigate the RAG Pipeline
 
-Use MCP to analyze your instrumented AI service while coding.
+### 3.1 Find recent requests
 
-### 3.1 Find Your Service
+Enter:
 
-```
-@dynatrace Tell me about the service called ai-chat-service-{YOUR_ATTENDEE_ID}
-```
+```text
+Use Dynatrace MCP to find spans from the last hour for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-### 3.2 Analyze Token Usage
-
-```
-@dynatrace What is the total input and output token usage for spans in regards to the ai-chat-service-{YOUR_ATTENDEE_ID}
+Summarise the number of spans by span name and sort the result from highest
+to lowest count.
 ```
 
-### 3.3 Debug While You Code
+Review whether the result includes operations associated with:
 
-Use MCP alongside your code to understand your application's behavior:
+- The `/chat` request
+- The RAG workflow
+- Intent analysis
+- Document retrieval
+- Context generation
+- Response generation
+- ChromaDB vector search
+- LLM calls
 
+Exact automatic span names can vary between instrumentation versions.
+
+### 3.2 Analyse token usage
+
+Enter:
+
+```text
+Use Dynatrace MCP to analyse spans from the last hour for
+ai-chat-service-{YOUR_ATTENDEE_ID} where gen_ai.usage.input_tokens is present.
+
+Return:
+- total input tokens
+- total output tokens
+- request count
+- average input tokens
+- average output tokens
+- a breakdown by gen_ai.response.model
+
+Show the DQL used.
 ```
-I'm looking at main.py where I call Azure OpenAI.
-@dynatrace What's the average latency for Azure OpenAI calls from my ai-chat-service-{YOUR_ATTENDEE_ID} service?
+
+Compare the result with the token analysis performed in Lab 2.
+
+### 3.3 Find the slowest operations
+
+Enter:
+
+```text
+Use Dynatrace MCP to calculate the average and maximum duration by span name
+for ai-chat-service-{YOUR_ATTENDEE_ID} during the last hour.
+
+Sort the result by average duration in descending order and show the DQL used.
 ```
 
-No context switching — debug while you code!
+Use the result to identify whether most of the observed time is associated with:
+
+- The complete HTTP request
+- The parent RAG workflow
+- An LLM call
+- Document retrieval
+- Vector search
+- Another operation
+
+> Parent and child spans can overlap. Do not add the durations of every span and treat the result as total request time.
+
+### 3.4 Compare RAG and direct requests
+
+If you generated both request types in Lab 1, enter:
+
+```text
+Use Dynatrace MCP to compare recent traces for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Identify one request that includes the rag_chat_pipeline workflow and one
+request that does not. Compare their span structure and duration.
+
+State clearly if the available telemetry is insufficient for the comparison.
+```
+
+This investigation should show that a RAG request contains more processing stages than a direct LLM request.
 
 ---
 
-## 💻 Step 4: Agentic Debugging Workflows (Developer)
+## 💻 Step 4: Investigate Simulated Errors
 
-MCP enables powerful agentic workflows where AI assistants can take action based on observability data.
+### 4.1 Generate errors
 
-### 4.1 Find the Bottleneck
+Return to the AI Chat interface.
 
-```
-I'm seeing slow responses in my RAG pipeline. 
-@dynatrace Analyze the trace data and tell me which step is the bottleneck for my ai-chat-service-{YOUR_ATTENDEE_ID} service.
-Is it embeddings, vector search, or the LLM call?
-```
+1. Enable **🐛 Simulate Errors**.
+2. Send at least eight messages.
+3. Keep the toggle enabled until several failed requests appear.
+4. Disable the toggle when finished.
 
-### 4.2 Proactive Analysis
+The application selects simulated errors from several categories, including:
 
-```
-@dynatrace Analyze my ai-chat-service-{YOUR_ATTENDEE_ID} service and suggest optimizations to reduce token usage while maintaining response quality
-```
+| Error code | Simulated condition |
+|---|---|
+| `EMB_NULL_VECTOR` | Local embedding generation returned an invalid vector |
+| `EMB_TOKEN_MISMATCH` | Embedding processing returned unexpected token information |
+| `CHROMA_COLLECTION_ERR` | ChromaDB collection or vector-store failure |
+| `LLM_MALFORMED_RESPONSE` | The LLM gateway returned a malformed response |
+| `CTX_WINDOW_EXCEEDED` | The request exceeded the simulated context limit |
+| `DOC_NO_MATCHES` | Document retrieval returned no relevant matches |
+| `RAG_CHAIN_TIMEOUT` | The RAG pipeline exceeded the simulated timeout |
+| `CONTENT_FILTER_BLOCK` | The response was blocked by a simulated policy check |
 
-### 4.3 Debugging Assistance
+These are intentionally generated workshop errors. They do not indicate a failure in Amazon Bedrock, LiteLLM, ChromaDB, or Dynatrace.
 
-```
-@dynatrace Help me understand why some of my RAG queries might be slow. Look at the trace data for patterns.
-```
+### 4.2 Find the generated errors
 
----
+Enter:
 
-## 💻 Step 4.4: Investigate Errors with MCP (Developer)
+```text
+Use Dynatrace MCP to find error logs from the last 30 minutes for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-Now let's generate some realistic errors and use MCP to investigate them — without leaving your IDE!
-
-### Generate Errors
-
-1. Go to your AI Chat Service UI (http://localhost:8000)
-2. Enable the **🐛 Simulate Errors** toggle in the options row
-3. Send 5-10 messages to trigger various error types
-
-The app will randomly generate realistic RAG/LLM errors like:
-- `EMB_NULL_VECTOR`: Embedding service returning null vectors
-- `CHROMA_COLLECTION_ERR`: Vector store connection issues
-- `LLM_MALFORMED_RESPONSE`: Invalid LLM responses
-- `CTX_WINDOW_EXCEEDED`: Context window limit errors
-- `CONTENT_FILTER_BLOCK`: Content policy violations
-
-### Find Your Errors with MCP
-
-Now use Dynatrace MCP to investigate the errors you generated:
-
-```
-@dynatrace Show me all errors in the last 15 minutes for my ai-chat-service-{YOUR_ATTENDEE_ID} service.
-What error codes are appearing most frequently?
+Filter to records where error.simulated equals "true".
+Summarise the count by error.code and sort from highest to lowest.
+Show the DQL used.
 ```
 
-### View Specific Log Entries
+The application writes the following structured log attributes:
 
-Ask MCP to show you the actual log details:
+- `error.code`
+- `error.message`
+- `error.stage`
+- `error.simulated`
+- `attendee.id`
 
-```
-@dynatrace Show me the log entries for EMB_NULL_VECTOR errors in my ai-chat-service-{YOUR_ATTENDEE_ID}.
-Include the error_message, stage, and timestamp for each.
-```
+### 4.3 Inspect the error details
 
-### Understand Error Attributes
+Enter:
 
-Each error log has structured attributes. Ask MCP to explain them:
+```text
+Use Dynatrace MCP to retrieve the simulated error logs from the last 30 minutes
+for ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-```
-@dynatrace For the errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service, 
-show me all the log attributes like error_code, error_message, and stage.
-What patterns do you see?
-```
+Return timestamp, error.code, error.message, error.stage, attendee.id,
+trace_id, and span_id when these fields are available.
 
-### Deep Dive on a Specific Error
-
-```
-@dynatrace I'm seeing CTX_WINDOW_EXCEEDED errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service. 
-Show me the full log details for these errors and explain what's happening.
+Sort the newest errors first.
 ```
 
-### Get Root Cause Analysis
+### 4.4 Investigate one error type
 
-```
-@dynatrace What's causing the errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service?
-Analyze the error logs and tell me which component is failing most often.
-```
+Choose an error code that appears in your data. For example:
 
-### Generate a DQL Query (Optional)
+```text
+Use Dynatrace MCP to investigate EMB_NULL_VECTOR errors from the last
+30 minutes for ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-If you want to see what DQL query would find these logs:
-
-```
-@dynatrace Generate a DQL query to find all logs where error_code equals 'EMB_NULL_VECTOR' 
-for my ai-chat-service-{YOUR_ATTENDEE_ID} service in the last hour.
+Show the matching log records and any trace context available.
+Explain what the application simulated, but do not claim that the real
+embedding model failed.
 ```
 
-> **Pro tip:** You just investigated production errors without leaving your IDE — no dashboard tabs, no context switching!
+This final instruction matters because the workshop deliberately generates the error.
+
+### 4.5 Ask for a code-level recommendation
+
+Enter:
+
+```text
+Review app/main.py and use the Dynatrace MCP evidence for the simulated
+EMB_NULL_VECTOR errors in ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Suggest a small Python change that would handle an invalid embedding result
+gracefully. Separate:
+1. what the telemetry shows
+2. what the code currently does
+3. your recommended change
+```
+
+Copilot can combine the local source code with evidence retrieved through Dynatrace MCP.
+
+> Always review generated code before applying it. Telemetry can identify behaviour, but a suggested code change still requires engineering judgement.
 
 </div>
 
@@ -251,376 +394,471 @@ for my ai-chat-service-{YOUR_ATTENDEE_ID} service in the last hour.
 
 <div class="persona-box sre" markdown="1">
 
-## 🔧 Step 5: Query Your AI Service (SRE)
+## 🔧 Step 5: Assess Service Usage
 
-Use MCP for quick incident triage without leaving your terminal.
+### 5.1 Summarise recent activity
 
-### 5.1 Find Your Service
+Enter:
 
+```text
+Use Dynatrace MCP to summarise telemetry from the last hour for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Include:
+- span count
+- earliest and latest timestamp
+- average span duration
+- maximum span duration
+- number of spans containing gen_ai.usage.input_tokens
+
+Show the DQL used.
 ```
-@dynatrace Tell me about the service called ai-chat-service-{YOUR_ATTENDEE_ID}
+
+### 5.2 Analyse model usage
+
+Enter:
+
+```text
+Use Dynatrace MCP to analyse LLM spans from the last hour for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Group the result by gen_ai.response.model and return:
+- request count
+- total input tokens
+- total output tokens
+- average duration
+
+Show the DQL used.
 ```
 
-### 5.2 Check for Anomalies
+Depending on the instrumentation, the model may be recorded as:
 
-```
-@dynatrace Are there any anomalies in the last hour for my ai-chat-service-{YOUR_ATTENDEE_ID} service?
-What's the current error rate and how does it compare to the baseline?
+```text
+workshop-chat
 ```
 
-Get Davis AI insights without opening the Dynatrace UI!
+or:
 
-### 5.3 Analyze Token Usage
+```text
+us.amazon.nova-micro-v1:0
+```
 
+### 5.3 Identify unusual requests
+
+Enter:
+
+```text
+Use Dynatrace MCP to find the 10 LLM spans with the highest input-token usage
+for ai-chat-service-{YOUR_ATTENDEE_ID} during the last hour.
+
+Return timestamp, span name, model, input tokens, output tokens, and duration.
+Explain any visible pattern without assuming a cause that is not present in
+the telemetry.
 ```
-@dynatrace What is the total input and output token usage for spans in regards to the ai-chat-service-{YOUR_ATTENDEE_ID} service?
-```
+
+This request separates observed data from interpretation.
 
 ---
 
-## 🔧 Step 6: Agentic Incident Response (SRE)
+## 🔧 Step 6: Perform Error Triage
 
-MCP enables powerful agentic workflows for incident response directly from your IDE.
+### 6.1 Generate the incident data
 
-### 6.1 Incident Response
+If you have not already generated errors:
 
-```
-@dynatrace Are there any open problems affecting my ai-chat-service-{YOUR_ATTENDEE_ID} service?
-If so, what's the root cause and which services are impacted?
-Draft a Slack message summarizing the incident.
-```
+1. Open the chat interface.
+2. Enable **🐛 Simulate Errors**.
+3. Send at least ten messages.
+4. Disable the toggle.
 
-**Note**: In this case, we don't anticipate that Dynatrace will have detected any problems due to lack of data and the small timeframe that this lab generates data. This example is meant to serve as inspiration for other types of questions you could ask!
+### 6.2 Create an error overview
 
-### 6.2 Service Architecture
+Enter:
 
-```
-@dynatrace Generate a summary of my ai-chat-service-{YOUR_ATTENDEE_ID} service's architecture based on the service flow data
-```
+```text
+Use Dynatrace MCP to summarise simulated errors from the last 30 minutes for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-### 6.3 Capacity Planning
+Filter to error.simulated == "true" and return:
+- total simulated errors
+- count by error.code
+- earliest error timestamp
+- latest error timestamp
+- affected error.stage values
 
-```
-@dynatrace Analyze my ai-chat-service-{YOUR_ATTENDEE_ID} service and suggest optimizations to reduce token usage while maintaining response quality
-```
-
----
-
-## 🔧 Step 6.4: Error Triage with MCP (SRE)
-
-Time to simulate a production incident and practice rapid triage using MCP!
-
-### Generate Errors
-
-1. Go to your AI Chat Service UI (http://localhost:8000)
-2. Enable the **🐛 Simulate Errors** toggle
-3. Send 10-15 messages rapidly to trigger various errors
-
-### Rapid Error Assessment
-
-Get an immediate overview of the error situation:
-
-```
-@dynatrace Give me a quick summary of all errors hitting my ai-chat-service-{YOUR_ATTENDEE_ID} service in the last 15 minutes.
-How many errors occurred? What types? What's the error rate percentage?
+Show the DQL used.
 ```
 
-### View Error Log Details
+### 6.3 Build an error timeline
 
-Ask MCP to show you what's in the actual logs:
+Enter:
 
-```
-@dynatrace Show me the error log entries for my ai-chat-service-{YOUR_ATTENDEE_ID} service.
-Include the error_code, error_message, stage, and timestamp for each error.
-```
+```text
+Use Dynatrace MCP to create a one-minute time series of simulated error logs
+from the last 30 minutes for ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-### Analyze Error Timeline
-
-```
-@dynatrace When did errors start occurring in my ai-chat-service-{YOUR_ATTENDEE_ID} service?
-Show me the timeline of errors over the last 15 minutes.
+Break down the result by error.code and show the DQL used.
 ```
 
-### Determine Error Impact
+### 6.4 Compare errors with requests
 
-```
-@dynatrace What percentage of requests to my ai-chat-service-{YOUR_ATTENDEE_ID} service are failing?
-Is this affecting all users or just specific request types?
-```
+Enter:
 
-### Identify Top Error Types
+```text
+Use Dynatrace MCP to compare simulated error logs with /chat request spans
+for ai-chat-service-{YOUR_ATTENDEE_ID} during the last 30 minutes.
 
-```
-@dynatrace What are the most common error_code values in my ai-chat-service-{YOUR_ATTENDEE_ID} service?
-Rank them by frequency.
-```
-
-### Root Cause with Dynatrace Intelligence
-
-```
-@dynatrace Analyze the error patterns in my ai-chat-service-{YOUR_ATTENDEE_ID} service.
-What is Dynatrace Intelligence's assessment of the root cause?
-Which component is the source of the failures?
+Report the number of simulated-error logs and the number of /chat request
+spans. Do not calculate an error-rate percentage unless the two datasets
+represent comparable requests and can be correlated reliably.
 ```
 
-### Create Incident Communication
+This prevents an invalid error rate from being calculated using unrelated span and log counts.
 
-```
-@dynatrace I need to communicate an incident to stakeholders.
-Based on the errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service, draft a brief incident summary
-including: affected service, error types, error rate, and preliminary root cause.
-```
+### 6.5 Prepare an investigation summary
 
-> **SRE Pro tip:** You just triaged a production incident without opening a single dashboard. Error logs, timelines, root cause, and stakeholder communication — all from your IDE!
+Enter:
 
-</div>
+```text
+Based only on the Dynatrace MCP evidence from the last 30 minutes, prepare a
+short technical summary for ai-chat-service-{YOUR_ATTENDEE_ID}.
 
----
+Include:
+- observed error codes
+- error counts
+- affected stages
+- first and latest observed error
+- any available trace correlation
+- recommended next investigation step
 
-# Bonus - Dynatrace Intelligence in the Dynatrace Platform
-
-Want to make use of Dynatrace Intelligence before even setting up the MCP? *Try it out directly in the Dynatrace UI.*
-
-1. Open a Dynatrace Notebook
-2. Add a **✨ Prompt** tile
-3. Try out the following question: 
-```
-I would like to see top 5 spans summarized by token usage and span name for service "ai-chat-service-{YOUR_ATTENDEE_ID}" in descending order
+State clearly that the errors were intentionally simulated for the workshop.
+Do not claim a production root cause.
 ```
 
-> **Pro tip:** This is just one example. Dynatrace Intelligence is available in several parts of the platform including the Problems app, Notebooks and Dashboards, Logs app, Databases app, and more!
+### 6.6 Generate a stakeholder update
 
-Learn more here:
-* [Dynatrace Intelligence - Announcement](https://www.dynatrace.com/news/blog/dynatrace-intelligence-at-the-core-of-autonomous-operations/)
-* [Dynatrace Intelligence - Documentation](https://docs.dynatrace.com/docs/shortlink/dynatrace-intelligence-landing)
+Enter:
 
----
+```text
+Using the same Dynatrace MCP evidence, draft a concise stakeholder update.
 
-## 🎭 Going Beyond the Basics
+Explain that:
+- this was a controlled workshop exercise
+- failures were intentionally generated
+- the affected workshop service
+- the observed error categories
+- no production impact occurred
 
-Below are some more advanced examples to get the most out of Dynatrace Intelligence and your AI agents!
-
-<div class="persona-box developer" markdown="1">
-
-## 💻 Developer Exercise: Propose & Fix Regressions
-
-Use Dynatrace Intelligence's agentic capabilities to not just identify issues, but propose fixes.
-
-### Detect Code-Level Issues
-
-```
-@dynatrace Look at the error traces for my ai-chat-service-{YOUR_ATTENDEE_ID} service.
-Can you identify which function or code path is causing the failures?
-Provide code-level details and stack traces if available.
-```
-
-### Get Fix Recommendations
-
-```
-@dynatrace Based on the EMB_NULL_VECTOR errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service, 
-what code changes would you recommend to handle this error gracefully?
-Show me a Python code example for proper error handling.
-```
-
-### Link Errors to Changes
-
-```
-@dynatrace Have there been any recent deployments or configuration changes 
-to my ai-chat-service-{YOUR_ATTENDEE_ID} service that correlate with the increase in errors?
-```
-
-### Generate DQL for Custom Investigation
-
-```
-@dynatrace Generate a DQL query to find all logs where error_code equals 'CTX_WINDOW_EXCEEDED' 
-for my ai-chat-service-{YOUR_ATTENDEE_ID} service in the last hour.
-Explain what the query does.
-```
-
-</div>
-
-<div class="persona-box sre" markdown="1">
-
-## 🔧 SRE Exercise: Agentic Incident Response
-
-Use Dynatrace Intelligence's agentic workflows for automated incident management.
-
-### Map Error Impact Across Dependencies
-
-```
-@dynatrace For the errors in my ai-chat-service-{YOUR_ATTENDEE_ID} service, 
-show me the full dependency map. Which downstream services are affected?
-What's the blast radius of this issue?
-```
-
-### Auto-Enrich Incident Data
-
-```
-@dynatrace Create a comprehensive incident report for the issues affecting 
-my ai-chat-service-{YOUR_ATTENDEE_ID} service. Include:
-- Timeline of when errors started
-- Affected components and their relationships
-- Error counts by type
-- Recommended severity level
-```
-
-### Suggest Runbook Actions
-
-```
-@dynatrace Based on the current error patterns in my ai-chat-service-{YOUR_ATTENDEE_ID} service,
-what remediation actions would you recommend?
-Are there any runbooks or automation workflows that could help resolve this?
-```
-
-### Generate Operations Dashboard Query
-
-```
-@dynatrace Generate a DQL query for a dashboard tile that shows:
-- Error rate over time for my ai-chat-service-{YOUR_ATTENDEE_ID} service
-- Breakdown by error_code
-- 5-minute time buckets for the last hour
+Do not invent customer impact, business impact, or a root cause.
 ```
 
 </div>
 
 ---
 
-## Step 7: MCP Best Practices
+## Bonus: Use Dynatrace Intelligence in a Notebook
 
-### 7.1 Effective Prompting
+You can perform a similar natural-language investigation directly in Dynatrace.
 
-**Good prompts are specific:**
+1. Open **Notebooks**.
+2. Create or open your workshop Notebook.
+3. Add a **Prompt** section.
+4. Enter:
 
-✅ Good: `@dynatrace Show me the P95 response time for my ai-chat-service-{YOUR_ATTENDEE_ID} service over the last 4 hours`
+```text
+Show the five LLM spans with the highest total token usage for
+ai-chat-service-{YOUR_ATTENDEE_ID} during the last hour.
 
-❌ Vague: `@dynatrace How is my service doing?`
-
-### 7.2 Iterative Queries
-
-Start broad, then drill down:
-
-1. `@dynatrace Show me an overview of my AI service`
-2. `@dynatrace What are the slowest endpoints?`
-3. `@dynatrace Why is /chat endpoint slow?`
-4. `@dynatrace Show me slow traces for /chat`
-
-### 7.3 Combining with Code
-
-You can use MCP alongside your code:
-
+Include span name, response model, input tokens, output tokens, total tokens,
+and duration. Sort by total tokens in descending order.
 ```
-I'm looking at main.py where I call Azure OpenAI. 
-@dynatrace What's the average latency for Azure OpenAI calls from my service?
+
+Review the generated query before relying on the result.
+
+Useful resources:
+
+- [Dynatrace Intelligence documentation](https://docs.dynatrace.com/docs/shortlink/dynatrace-intelligence-landing)
+- [Dynatrace Intelligence announcement](https://www.dynatrace.com/news/blog/dynatrace-intelligence-at-the-core-of-autonomous-operations/)
+
+---
+
+## Step 7: MCP Investigation Practices
+
+### 7.1 Specify the data scope
+
+A useful request identifies:
+
+- The service
+- The time range
+- The required data source
+- The fields or calculations needed
+- The desired result format
+
+Less useful:
+
+```text
+How is my service doing?
 ```
+
+More useful:
+
+```text
+Use Dynatrace MCP to calculate the P95 duration of /chat request spans from
+the last hour for ai-chat-service-{YOUR_ATTENDEE_ID}. Show the DQL used.
+```
+
+### 7.2 Ask for the query
+
+Add:
+
+```text
+Show the DQL used.
+```
+
+This allows you to:
+
+- Verify the filters
+- Confirm the selected fields
+- Reuse the query in Dynatrace
+- Identify assumptions made by the assistant
+
+### 7.3 Require evidence-based answers
+
+For investigations, add:
+
+```text
+Separate observed evidence from interpretation. State when the available
+telemetry is insufficient.
+```
+
+This reduces unsupported conclusions.
+
+### 7.4 Refine the investigation iteratively
+
+Start with an overview:
+
+```text
+Use Dynatrace MCP to summarise recent telemetry for
+ai-chat-service-{YOUR_ATTENDEE_ID}.
+```
+
+Then narrow the investigation:
+
+```text
+Which span names account for the highest average duration?
+```
+
+Continue with a specific request:
+
+```text
+Show the five slowest instances of the highest-latency span and include their
+trace IDs.
+```
+
+Finally, request correlation:
+
+```text
+For those trace IDs, identify related errors or logs when available.
+```
+
+### 7.5 Combine telemetry with code carefully
+
+You can ask Copilot to compare Dynatrace evidence with `app/main.py`:
+
+```text
+Review app/main.py and use Dynatrace MCP to investigate the slowest operation
+in ai-chat-service-{YOUR_ATTENDEE_ID}.
+
+Separate:
+- observations from telemetry
+- relevant code paths
+- recommended changes
+```
+
+Do not ask the assistant to modify the application automatically during the workshop. Review the recommendation first.
 
 ---
 
 ## ✅ Checkpoint
 
-Before completing the workshop, verify:
+Before proceeding to Lab 4, verify that you can:
 
-- [ ] You've added your `DT_ENVIRONMENT` URL to `.vscode/mcp.json`
-- [ ] You've reloaded VS Code after saving the configuration
-- [ ] You can query Dynatrace using `@dynatrace` in Copilot Chat
-- [ ] You've successfully retrieved information about your AI service
-- [ ] You've used the 🐛 **Simulate Errors** toggle to generate test errors
-- [ ] You've investigated errors using MCP without leaving your IDE
-- [ ] You understand how to use MCP for problem analysis
-- [ ] You've explored the Dynatrace Intelligence agentic workflow exercises
+- [ ] Find `Dynatrace-MCP` in the Copilot tool list
+- [ ] Run a Dynatrace MCP request from Agent mode
+- [ ] Retrieve telemetry for `ai-chat-service-{YOUR_ATTENDEE_ID}`
+- [ ] Ask for and review the generated DQL
+- [ ] Analyse input and output token usage
+- [ ] Identify high-latency operations
+- [ ] Generate simulated errors
+- [ ] Query logs using `error.code` and `error.simulated`
+- [ ] Investigate one simulated error using logs and trace context
+- [ ] Produce an evidence-based technical summary
+- [ ] Distinguish observed evidence from suggested conclusions
 
 ---
 
 ## 🆘 Troubleshooting
 
-### "MCP server not found"
+### Dynatrace MCP does not appear in Copilot
 
-1. Verify Node.js is installed: `node --version`
-2. Ensure the `.vscode/mcp.json` file exists in your workspace
-3. Test MCP server access: `npx @dynatrace-oss/dynatrace-mcp-server@latest --version`
-4. Clear NPM cache if needed: `npm cache clean --force`
+1. Confirm `.vscode/mcp.json` exists.
+2. Validate it:
 
-### "@dynatrace not recognized"
+```bash
+python -m json.tool .vscode/mcp.json
+```
 
-1. Check that `.vscode/mcp.json` contains the correct configuration
-2. Verify the JSON syntax is valid (no trailing commas, proper quotes)
-3. Reload VS Code window (`Developer: Reload Window`)
-4. Make sure `DT_ENVIRONMENT` is set to your Dynatrace URL
+3. Confirm that `DT_MCP_BEARER_TOKEN` has been configured without printing its value:
 
-### "Authentication failed" or "401 Unauthorized"
+```bash
+if [ -n "$DT_MCP_BEARER_TOKEN" ]; then
+  echo "MCP token is configured"
+else
+  echo "MCP token is missing"
+fi
+```
 
-1. Verify `DT_ENVIRONMENT` in `.vscode/mcp.json` is correct
-2. Ensure the URL format is `https://YOUR_ENV_ID.apps.dynatrace.com`
-3. Check that your Dynatrace environment allows API access
-4. Check that your token has appropriate permissions:
-   - `Read entities`
-   - `Read problems`
-   - `Read metrics`
-   - `Read logs`
-   - `Read traces`
+4. Run:
 
-### "No data returned"
+```bash
+bash .devcontainer/configure.sh
+```
 
-1. Verify `DT_ENVIRONMENT` in `.vscode/mcp.json` is correct
-2. Check that your service is sending data to Dynatrace
-3. Try a simpler query first: `@dynatrace List all services`
+5. Run **Developer: Reload Window**.
+6. Open a new Copilot Chat session in Agent mode.
 
-### "Connection refused" or "Network error"
+### `@dynatrace` is not recognised
 
-1. If in a Codespace, ensure outbound connections are allowed
-2. Check if your organization has firewall rules blocking the connection
-3. Verify the URL format is `https://YOUR_ENV_ID.apps.dynatrace.com`
+The available interaction syntax depends on the GitHub Copilot interface.
+
+Use Agent mode and enter:
+
+```text
+Use Dynatrace MCP to list the services with telemetry in the last hour.
+```
+
+Also confirm that the Dynatrace MCP tools are enabled in the tools picker.
+
+### Authentication fails
+
+Confirm that:
+
+1. Lab 0's `configure.sh` completed successfully.
+2. The VS Code window was reloaded after configuration.
+3. `.vscode/mcp.json` references `${env:DT_MCP_BEARER_TOKEN}`.
+4. The instructor-provided platform token has not expired or been replaced.
+5. The token has the permissions required by the workshop.
+
+Do not paste the token into Copilot Chat or the terminal output.
+
+### No data is returned
+
+1. Confirm that `python app/main.py` is still running.
+2. Generate several new chat requests.
+3. Confirm that Lab 1 instrumentation initialised successfully.
+4. Use the exact service name:
+
+```text
+ai-chat-service-{YOUR_ATTENDEE_ID}
+```
+
+5. Use a time range that includes the generated traffic.
+6. Ask MCP to show the DQL so you can review the filters.
+
+### Error queries return no data
+
+Confirm that:
+
+1. **Simulate Errors** was enabled.
+2. Several requests were sent while the toggle was enabled.
+3. The query uses logs rather than only spans.
+4. The query filters on the actual field names:
+   - `error.simulated`
+   - `error.code`
+   - `error.message`
+   - `error.stage`
+5. The selected time range includes the generated errors.
+
+### Copilot returns a generic answer without using Dynatrace
+
+Rewrite the request explicitly:
+
+```text
+Use the Dynatrace MCP tools to answer this question. Do not answer from general
+knowledge. Show the DQL and summarise the retrieved records.
+```
+
+Check the tool-call information in Copilot Chat to verify that a Dynatrace MCP tool was invoked.
+
+### The generated DQL fails
+
+Ask Copilot to correct the query:
+
+```text
+The generated DQL failed with this error:
+
+[PASTE THE ERROR ONLY]
+
+Correct the query without changing the intended service or time range.
+```
+
+Do not paste credentials or tokens into the chat.
+
+### The assistant claims a production root cause
+
+The errors in this lab are simulated. Use:
+
+```text
+Rewrite the conclusion using only the retrieved evidence. State explicitly
+that the errors were intentionally simulated and do not represent a real
+provider or infrastructure failure.
+```
 
 ---
 
-## 🎓 What You've Learned
+## 🎓 What You Have Learned
 
 <div class="persona-box developer" markdown="1">
 
 ### 💻 Developer Takeaways
 
-You can now debug without leaving your IDE:
+You can now:
 
-1. ✅ Configure Dynatrace MCP in VS Code
-2. ✅ Query your service performance using natural language
-3. ✅ Find bottlenecks in your RAG pipeline from the IDE
-4. ✅ **Investigate errors** using error simulation and MCP queries
-5. ✅ Get **fix recommendations** with code examples
-6. ✅ Generate DQL queries for custom investigations
-7. ✅ Combine code context with observability data
+1. Query Dynatrace telemetry from VS Code
+2. Investigate a RAG request without manually switching tools
+3. Analyse workflow, vector-search, and LLM spans
+4. Examine token usage and latency
+5. Correlate simulated errors with available trace context
+6. Combine local code context with observability evidence
+7. Request DQL that can be reviewed and reused
 
-**Your new workflow:** See an error? Enable 🐛 Simulate Errors, reproduce the issue, then ask `@dynatrace` for the root cause and fix suggestions — all while looking at your code!
+**Your investigation workflow:** reproduce the behaviour, retrieve the evidence, inspect the relevant code, and only then propose a change.
 
 </div>
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE/Platform Takeaways
+### 🔧 SRE and Platform Takeaways
 
-You can now respond to incidents faster:
+You can now:
 
-1. ✅ Configure Dynatrace MCP for terminal/IDE access
-2. ✅ Check for anomalies and error rates instantly
-3. ✅ **Triage errors** with rapid assessment queries
-4. ✅ **Map impact** across service dependencies
-5. ✅ Get Davis AI root cause analysis via natural language
-6. ✅ **Auto-generate incident reports** and communications
-7. ✅ Query service architecture and capacity data
+1. Scope MCP queries by service and time range
+2. Summarise token usage and model activity
+3. Identify operations with high latency
+4. Triage structured application errors
+5. Build an error timeline
+6. Prepare evidence-based technical and stakeholder summaries
+7. Avoid unsupported root-cause and impact claims
 
-**Your 2 AM incident response:** Enable error simulation, generate test errors, then practice full incident triage — ask `@dynatrace` for error summary, root cause, blast radius, and draft a Slack message — all without opening a browser!
+**Your triage workflow:** establish the scope, retrieve the data, identify the pattern, correlate the evidence, and communicate only what the telemetry supports.
 
 </div>
 
 ---
 
-## 🚀 Next Steps
+## 🚀 Next Step
 
-Now that you've completed this lab, continue to Lab 4 to learn how to automate your AI observability workflows!
-
----
-
-## 🎉 Great Progress!
-
-You've learned how to use Dynatrace MCP for agentic AI workflows. Now let's put it all together with automated workflows!
+In Lab 4, you will use DQL and Dynatrace Workflows to automate analysis and notification for the instrumented AI service.
 
 <div class="lab-nav">
   <a href="lab2-explore-traces">← Lab 2: Explore Traces</a>

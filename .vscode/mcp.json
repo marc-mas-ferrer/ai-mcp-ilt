@@ -2,7 +2,7 @@
   "servers": {
     "Dynatrace-MCP": {
       "type": "sse",
-      "url": "https://zrk0505h.sprint.apps.dynatracelabs.com/platform-reserved/mcp-gateway/v0.1/servers/dynatrace-mcp/mcp",
+      "url": "https://ehd43494.apps.dynatrace.com/platform-reserved/mcp-gateway/v0.1/servers/dynatrace-mcp/mcp",
       "headers": {
         "Authorization": "Bearer ${env:DT_MCP_BEARER_TOKEN}"
       }

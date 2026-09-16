@@ -9,7 +9,7 @@ A hands-on workshop for learning AI/LLM observability with Dynatrace and the Mod
 
 > ## 🚀 **Workshop Attendees: Start Here!**
 > 
-> ### [![📖 Open Workshop Guide](https://img.shields.io/badge/📖_Open_Workshop_Guide-Click_Here_to_Start-blue?style=for-the-badge&logoColor=white)](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop)
+> ### [![📖 Open Workshop Guide](https://img.shields.io/badge/📖_Open_Workshop_Guide-Click_Here_to_Start-blue?style=for-the-badge&logoColor=white)](https://marc-mas-ferrer.github.io/ai-mcp-ilt)
 >
 > The guide walks you through launching your Codespace, configuring your environment, and completing all labs with detailed instructions, code snippets, and screenshots.
 
@@ -37,11 +37,11 @@ A hands-on workshop for learning AI/LLM observability with Dynatrace and the Mod
 
 | Lab | Duration | Description |
 |-----|----------|-------------|
-| [Lab 0: Setup](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop/lab0-setup.html) | 15 min | Environment configuration |
-| [Lab 1: Instrumentation](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop/lab1-instrumentation.html) | 15 min | Add OpenLLMetry to the sample app |
-| [Lab 2: Explore Traces](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop/lab2-explore-traces.html) | 30 min | Analyze AI traces in Dynatrace |
-| [Lab 3: Dynatrace MCP](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop/lab3-dynatrace-mcp.html) | 30 min | Use MCP for agentic AI |
-| [Lab 4: Automation](https://sudosmitty.github.io/dynatrace-ai-mcp-workshop/lab4-automation.html) | 30 min | Create automated workflows |
+| [Lab 0: Setup](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab0-setup.html) | 15 min | Environment configuration |
+| [Lab 1: Instrumentation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab1-instrumentation.html) | 15 min | Add OpenLLMetry to the sample app |
+| [Lab 2: Explore Traces](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab2-explore-traces.html) | 30 min | Analyze AI traces in Dynatrace |
+| [Lab 3: Dynatrace MCP](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab3-dynatrace-mcp.html) | 30 min | Use MCP for agentic AI |
+| [Lab 4: Automation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab4-automation.html) | 30 min | Create automated workflows |
 
 ---
 
