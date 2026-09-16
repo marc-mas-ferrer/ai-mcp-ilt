@@ -26,6 +26,7 @@ warnings.filterwarnings("ignore", message="Invalid type NoneType for attribute")
 # (handles both running from app/ directory and from project root)
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
+    
     load_dotenv(env_path)
 else:
     load_dotenv()  # Fall back to default behavior
@@ -134,7 +135,7 @@ ATTENDEE_ID = os.getenv("ATTENDEE_ID", "workshop-attendee")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
 
-# LLM gateway configuration (LiteLLM -> Amazon Bedrock)
+# LLM Gateway Configuration (LiteLLM -> Amazon Bedrock)
 LLM_BASE_URL        = os.getenv("LLM_BASE_URL")
 LLM_API_KEY         = os.getenv("LLM_API_KEY")
 LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "workshop-chat")
@@ -144,7 +145,7 @@ LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "workshop-chat")
 # Lifespan event handler (replaces deprecated @app.on_event)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application startup and shutdown."""
+    """Lifespan context manager for startup/shutdown events"""
     # Startup
     logger.info("AI Chat Service starting", extra={
         "attendee_id": ATTENDEE_ID,
@@ -158,11 +159,7 @@ async def lifespan(app: FastAPI):
     ║         Service: ai-chat-service-{ATTENDEE_ID:<28}║
     ╚══════════════════════════════════════════════════════════════════════╝
     """)
-    if not initialize_rag():
-        raise RuntimeError(
-            "RAG initialisation failed. Review the startup error above."
-        )
-
+    initialize_rag()
     yield
     # Shutdown
     logger.info("AI Chat Service shutting down", extra={"attendee_id": ATTENDEE_ID})
@@ -376,7 +373,7 @@ class LocalHashingEmbeddings(Embeddings):
 # RAG Components Initialization
 # ═══════════════════════════════════════════════════════════════════════════
 
-# Initialise embeddings and vector store
+# Initialize embeddings and vector store
 embeddings = None
 vectorstore = None
 qa_chain = None
@@ -424,7 +421,7 @@ class DocumentRetrievalError(Exception):
 SIMULATED_ERRORS = [
     {
         "exception": EmbeddingServiceError,
-        "message": "Local vectorisation returned a null vector for the input chunk",
+        "message": "Local vectorization returned a null vector for the input chunk",
         "log_level": "error",
         "error_code": "EMB_NULL_VECTOR"
     },
@@ -448,7 +445,7 @@ SIMULATED_ERRORS = [
     },
     {
         "exception": DocumentRetrievalError,
-        "message": "Vector search returned no relevant workshop documents",
+        "message": "Semantic search returned 0 documents with similarity score > 0.7 threshold",
         "log_level": "warning",
         "error_code": "DOC_NO_MATCHES"
     },
@@ -468,7 +465,7 @@ SIMULATED_ERRORS = [
         "exception": EmbeddingServiceError,
         "message": "Vector dimension mismatch: Expected 384 dimensions, received 0",
         "log_level": "error",
-        "error_code": "EMB_DIMENSION_MISMATCH"
+        "error_code": "EMB_TOKEN_MISMATCH"
     }
 ]
 
@@ -531,7 +528,7 @@ def retrieve_documents(query: str) -> list:
     """
     # Step 2: Generate a local query vector and search ChromaDB
 
-    Local vectorisation occurs in-process and does not create a remote
+    Local vectorization occurs in-process and does not create a remote
     embedding-model span. ChromaDB uses the resulting vector to find the
     most relevant document chunks.
     """
@@ -704,24 +701,10 @@ def analyze_query_intent(query: str) -> dict:
 
 
 def initialize_rag():
-    """Initialise the local RAG components and LiteLLM chat client."""
+    """Initialize the RAG components with sample documents."""
     global embeddings, vectorstore, qa_chain, retriever, llm
 
     try:
-        missing = [
-            name
-            for name, value in {
-                "LLM_BASE_URL": LLM_BASE_URL,
-                "LLM_API_KEY": LLM_API_KEY,
-                "LLM_CHAT_MODEL": LLM_CHAT_MODEL,
-            }.items()
-            if not value
-        ]
-        if missing:
-            raise ValueError(
-                "Missing required LLM configuration: " + ", ".join(missing)
-            )
-
         # Initialise the deterministic local vectoriser.
         # This makes no network calls and downloads no external model.
         embeddings = LocalHashingEmbeddings(dimensions=384)
@@ -818,7 +801,7 @@ async def root():
 async def api_health():
     """API Health check with service information"""
     return HealthResponse(
-        status="healthy" if retriever is not None and llm is not None else "degraded",
+        status="healthy",
         attendee_id=ATTENDEE_ID,
         service_name=f"ai-chat-service-{ATTENDEE_ID}"
     )
@@ -827,7 +810,7 @@ async def api_health():
 async def health_check():
     """Health check endpoint"""
     return HealthResponse(
-        status="healthy" if retriever is not None and llm is not None else "degraded",
+        status="healthy",
         attendee_id=ATTENDEE_ID,
         service_name=f"ai-chat-service-{ATTENDEE_ID}"
     )
@@ -838,9 +821,9 @@ def process_rag_chat(message: str) -> tuple:
     RAG Chat Pipeline - Groups all LLM calls under a single parent trace
     """
     # Step 1: Analyze query intent (generates LLM span)
-    analyze_query_intent(message)
+    intent_info = analyze_query_intent(message)
     
-    # Step 2: Generate a local query vector and search ChromaDB
+    # Step 2: Retrieve relevant documents (generates embedding + search spans)
     retrieved_docs = retrieve_documents(message)
     
     # Step 3: Generate context from documents
@@ -862,7 +845,7 @@ async def chat(request: ChatRequest):
     
     This endpoint generates multiple trace spans:
     1. Query intent analysis (LLM call)
-    2. Local vectorisation and ChromaDB document retrieval
+    2. Local vectorization and ChromaDB document retrieval
     3. Context generation
     4. Response generation (LLM call)
     5. Source summarization
@@ -935,7 +918,7 @@ async def chat(request: ChatRequest):
         )
         
     except Exception as e:
-        logger.exception("Error processing chat request", extra={
+        logger.error("Error processing chat request", extra={
             "error": str(e),
             "attendee_id": ATTENDEE_ID
         })
@@ -965,9 +948,7 @@ async def get_info():
     return {
         "service_name": f"ai-chat-service-{ATTENDEE_ID}",
         "attendee_id": ATTENDEE_ID,
-        "rag_initialized": retriever is not None and llm is not None,
-        "vectoriser": "local-hashing-384",
-        "chat_model": LLM_CHAT_MODEL,
+        "rag_initialized": qa_chain is not None,
         "documents_loaded": len(SAMPLE_DOCUMENTS),
         "endpoints": [
             {"path": "/", "method": "GET", "description": "Service info"},
