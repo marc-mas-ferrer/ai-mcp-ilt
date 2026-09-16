@@ -8,7 +8,7 @@ nav_order: 2
 
 **Duration:** ~15 minutes
 
-In this lab, you will launch your GitHub Codespace, configure the credentials provided by your instructor, and verify that the sample RAG application works before adding observability instrumentation.
+In this lab, you will choose a recognisable Workshop ID, launch your GitHub Codespace, add the shared workshop credentials, and verify the sample RAG application before adding observability instrumentation.
 
 ---
 
@@ -17,31 +17,39 @@ In this lab, you will launch your GitHub Codespace, configure the credentials pr
 Before starting, make sure you have:
 
 - ✅ A GitHub account with Codespaces access
-- ✅ The workshop credentials provided by your instructor
+- ✅ The workshop credential block provided by your instructor
 - ✅ Access to the workshop repository
 - ✅ Login access to the Dynatrace workshop environment
 
 ---
 
-## 🏷️ Set Your Attendee ID
+## 🏷️ Set Your Workshop ID
 
-Before starting the lab, set your attendee ID in the sidebar on the left side of this page.
+Choose your Workshop ID in the sidebar on the left side of this page.
 
-Your attendee ID personalises the commands and DQL queries throughout the workshop.
+The guide uses this value to personalise commands and DQL queries. The configuration command later in this lab uses the same value to configure your Codespace automatically.
 
 1. Find the **Your Attendee ID** field in the sidebar.
-2. Enter a short identifier using lowercase letters, numbers, or hyphens.
-3. Select **Set** or press Enter.
+2. Enter a short identifier that you will recognise easily in Dynatrace.
+3. Use only lowercase letters, numbers and hyphens.
+4. Do not use an email address.
+5. Select **Set** or press Enter.
 
-For example:
+Examples:
 
 ```text
-mmas
+marc-mas
+acme-alex
+partner07
 ```
 
-> 💡 **Tip:** Use a short, unique identifier without spaces. The workshop uses it to create your service name:
->
-> `ai-chat-service-{YOUR_ATTENDEE_ID}`
+Your service will appear in Dynatrace as:
+
+```text
+ai-chat-service-{YOUR_ATTENDEE_ID}
+```
+
+> 💡 **Tip:** For a partner workshop, a short pattern such as `company-firstname` is easy to recognise while avoiding email addresses.
 
 ---
 
@@ -59,141 +67,230 @@ On the GitHub Codespaces page:
 
 1. Keep the default repository configuration.
 2. Select **Create codespace**.
-3. Wait for the Codespace to finish building.
-4. Confirm that VS Code opens in your browser.
-5. Wait until the setup process in the terminal has finished.
+3. Wait for VS Code to open in your browser.
+4. Wait until the automatic setup process in the terminal finishes.
+5. Do not close the terminal while Python dependencies are being installed.
 
-> 💡 **Important:** Each attendee gets an isolated Codespace. Changes made in your Codespace do not modify the workshop repository or affect other attendees.
+The setup script automatically creates a guided `.env` file in the repository root.
+
+> 💡 **Important:** Each attendee receives an isolated Codespace. Changes inside your Codespace do not modify the main workshop repository or another attendee's environment.
+
+### 1.3 Check the setup result
+
+At the end of setup, the terminal should display an **ACTION REQUIRED** section telling you to:
+
+1. Open `.env`.
+2. Replace every `PASTE_HERE` value.
+3. Save the file.
+4. Run the personalised configuration command shown later in this lab.
 
 ---
 
-## Step 2: Configure Your Workshop Credentials
+## Step 2: Add the Shared Workshop Credentials
 
-Your instructor will provide the values required by the application.
+Your instructor provides one shared credential block containing:
 
-These include:
-
-- Your attendee ID
 - The LiteLLM gateway URL
 - The LiteLLM workshop key
 - The Dynatrace OTLP endpoint
 - The Dynatrace ingest token
 - The Dynatrace MCP platform token
 
-### 2.1 Open the `.env` file
+You do not need to enter the Workshop ID manually in `.env`. The personalised command in Step 3 writes it for you.
+
+### 2.1 Open `.env`
 
 In the VS Code Explorer:
 
-1. Locate the `.env` file in the root of the repository.
-2. Open the file.
-3. Replace the empty values with those provided by your instructor.
-
-Your `.env` file should have this structure:
+1. Find `.env` in the repository root.
+2. Open it.
+3. Leave this line empty:
 
 ```bash
-# Your unique workshop identifier
-ATTENDEE_ID={YOUR_ATTENDEE_ID}
-
-# LLM gateway
-LLM_BASE_URL=http://18.118.23.218:4000/v1
-LLM_API_KEY=sk-workshop-INSTRUCTOR_PROVIDED_VALUE
-LLM_CHAT_MODEL=workshop-chat
-
-# Dynatrace OTLP ingestion
-DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
-DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED_VALUE
-
-# Dynatrace MCP
-DT_MCP_BEARER_TOKEN=dt0s16.INSTRUCTOR_PROVIDED_VALUE
+ATTENDEE_ID=
 ```
 
-> ⚠️ **Important:** Do not add quotation marks around the values. Do not add spaces before or after `=`.
+`configure.sh` populates it from the Workshop ID entered in the guide.
 
-### 2.2 Check the endpoint formats
+### 2.2 Replace the credential placeholders
 
-Confirm the following:
+Replace every `PASTE_HERE` value with the corresponding value from the instructor credential block.
 
-- `LLM_BASE_URL` ends with `/v1`
-- `DT_ENDPOINT` ends with `/api/v2/otlp`
-- `LLM_CHAT_MODEL` is `workshop-chat`
-- `ATTENDEE_ID` matches the value you entered in the workshop sidebar
+Before configuration, the editable section looks like:
 
-### 2.3 Save the file
+```bash
+ATTENDEE_ID=
 
-Save `.env` using:
+LLM_BASE_URL=PASTE_HERE
+LLM_API_KEY=PASTE_HERE
+LLM_CHAT_MODEL=workshop-chat
+
+DT_ENDPOINT=PASTE_HERE
+DT_API_TOKEN=PASTE_HERE
+
+DT_MCP_BEARER_TOKEN=PASTE_HERE
+```
+
+After pasting the instructor values, the structure should look similar to:
+
+```bash
+ATTENDEE_ID=
+
+LLM_BASE_URL=http://INSTRUCTOR_GATEWAY:4000/v1
+LLM_API_KEY=sk-workshop-INSTRUCTOR_PROVIDED
+LLM_CHAT_MODEL=workshop-chat
+
+DT_ENDPOINT=https://INSTRUCTOR_ENV.live.dynatrace.com/api/v2/otlp
+DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED
+
+DT_MCP_BEARER_TOKEN=dt0s16.INSTRUCTOR_PROVIDED
+```
+
+The examples above show the expected format only. Use the exact values supplied by your instructor.
+
+### 2.3 Understand each value
+
+| Variable | Expected format | Purpose |
+|---|---|---|
+| `ATTENDEE_ID` | Filled by `configure.sh` | Creates your attendee-specific service name |
+| `LLM_BASE_URL` | Ends with `/v1` | OpenAI-compatible LiteLLM gateway |
+| `LLM_API_KEY` | Starts with `sk-workshop-` | Authenticates to the workshop gateway |
+| `LLM_CHAT_MODEL` | `workshop-chat` | LiteLLM model alias |
+| `DT_ENDPOINT` | Ends with `/api/v2/otlp` | Dynatrace OTLP ingest endpoint |
+| `DT_API_TOKEN` | Starts with `dt0c01.` | Sends traces and logs to Dynatrace |
+| `DT_MCP_BEARER_TOKEN` | Starts with `dt0s16.` | Allows GitHub Copilot to use Dynatrace MCP |
+
+> ⚠️ **Important:** Do not add quotation marks. Do not add spaces before or after `=`. Do not share the token values or paste them into Copilot Chat.
+
+### 2.4 Save `.env`
+
+Save using:
 
 - `Cmd+S` on macOS
 - `Ctrl+S` on Windows or Linux
 
 ---
 
-## Step 3: Apply the Configuration
+## Step 3: Apply Your Personalised Configuration
 
-The application can load `.env` directly, but VS Code also needs the MCP token in its environment before Lab 3.
+### 3.1 Copy the personalised command
 
-### 3.1 Run the configuration script
-
-From the repository root, run:
+The command below already contains the Workshop ID entered in the guide sidebar:
 
 ```bash
-bash .devcontainer/configure.sh
+bash .devcontainer/configure.sh --attendee-id={YOUR_ATTENDEE_ID}
 ```
 
-The script validates the required values, configures the Dynatrace MCP token, and makes the workshop variables available to new terminal sessions.
+Copy the rendered command from this page and run it in the Codespace terminal.
 
-Expected output includes:
+For example, if the sidebar contains `acme-alex`, the command appears as:
+
+```bash
+bash .devcontainer/configure.sh --attendee-id=acme-alex
+```
+
+You enter the Workshop ID only once, in the guide. The command transfers that value into the Codespace `.env` file.
+
+### 3.2 Review the validation output
+
+The script checks:
+
+- The Workshop ID format
+- That every required value is present
+- That no `PASTE_HERE` values remain
+- That `LLM_BASE_URL` ends with `/v1`
+- That `LLM_CHAT_MODEL` is `workshop-chat`
+- That `DT_ENDPOINT` ends with `/api/v2/otlp`
+- Whether the three token values use their expected prefixes
+- That `.vscode/mcp.json` exists
+
+Successful output includes:
 
 ```text
-✅ MCP token configured
-✅ Attendee ID: {YOUR_ATTENDEE_ID}
+CONFIGURATION COMPLETE
+
+Workshop ID:
+  {YOUR_ATTENDEE_ID}
+
+Dynatrace service name:
+  ai-chat-service-{YOUR_ATTENDEE_ID}
 ```
 
-If the script reports an empty value, return to `.env`, complete the missing field, save the file, and run the script again.
+The script validates secrets without printing their values.
 
-### 3.2 Reload VS Code
+If configuration is incomplete, return to `.env`, correct the reported fields, save, and run the same personalised command again.
 
-After the script completes:
+### 3.3 Confirm that `.env` was updated
 
-1. Press `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows.
-2. Search for **Developer: Reload Window**.
-3. Select the command.
-4. Wait for VS Code to reload.
-
-This allows VS Code and GitHub Copilot to read the updated MCP configuration.
-
-### 3.3 Open a new terminal
-
-After the reload:
-
-1. Open **Terminal**.
-2. Select **New Terminal**.
-3. Run:
+Open `.env` again. The first value should now be:
 
 ```bash
-echo "Attendee: $ATTENDEE_ID"
+ATTENDEE_ID={YOUR_ATTENDEE_ID}
+```
+
+Do not edit this value manually after configuration. If you change the Workshop ID in the guide, rerun the newly personalised command.
+
+---
+
+## Step 4: Reload VS Code
+
+A reload is required so GitHub Copilot and the Dynatrace MCP integration can read the configured MCP credential.
+
+1. Open the Command Palette:
+   - `Cmd+Shift+P` on macOS
+   - `Ctrl+Shift+P` on Windows or Linux
+2. Search for **Developer: Reload Window**.
+3. Select the command.
+4. Wait until VS Code finishes reloading.
+5. Open a new terminal.
+
+> The Python application can read `.env` directly, but the VS Code reload is still required for the MCP configuration used in Lab 3.
+
+### 4.1 Verify the non-secret values
+
+In the new terminal, run:
+
+```bash
+echo "Workshop ID: $ATTENDEE_ID"
+echo "Service: ai-chat-service-$ATTENDEE_ID"
 echo "LLM gateway: $LLM_BASE_URL"
 echo "LLM model: $LLM_CHAT_MODEL"
 echo "Dynatrace endpoint: $DT_ENDPOINT"
 ```
 
-Expected result:
+Expected structure:
 
 ```text
-Attendee: {YOUR_ATTENDEE_ID}
-LLM gateway: http://18.118.23.218:4000/v1
+Workshop ID: {YOUR_ATTENDEE_ID}
+Service: ai-chat-service-{YOUR_ATTENDEE_ID}
+LLM gateway: http://INSTRUCTOR_GATEWAY:4000/v1
 LLM model: workshop-chat
-Dynatrace endpoint: https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
+Dynatrace endpoint: https://INSTRUCTOR_ENV.live.dynatrace.com/api/v2/otlp
 ```
 
-The command intentionally does not print any token values.
+Do not print `LLM_API_KEY`, `DT_API_TOKEN`, or `DT_MCP_BEARER_TOKEN`.
+
+### 4.2 Verify that secrets are present without printing them
+
+Run:
+
+```bash
+for variable in LLM_API_KEY DT_API_TOKEN DT_MCP_BEARER_TOKEN; do
+  if [ -n "${!variable}" ]; then
+    echo "OK: $variable is configured"
+  else
+    echo "MISSING: $variable"
+  fi
+done
+```
+
+All three values should report `OK`.
 
 ---
 
-## Step 4: Verify the Sample Application
+## Step 5: Verify the Sample Application
 
-Before adding instrumentation, confirm that the RAG application can start and communicate with the LLM gateway.
-
-### 4.1 Start the application
+### 5.1 Start the application
 
 From the repository root, run:
 
@@ -201,42 +298,40 @@ From the repository root, run:
 python app/main.py
 ```
 
-### 4.2 Check the startup output
+### 5.2 Check the startup output
 
-You should see output similar to:
+Expected output includes:
 
 ```text
-╔══════════════════════════════════════════════════════════════════════╗
-║         🚀 AI Chat Service Starting...                              ║
-║                                                                     ║
-║         Attendee ID: {YOUR_ATTENDEE_ID}                             ║
-║         Service: ai-chat-service-{YOUR_ATTENDEE_ID}                 ║
-╚══════════════════════════════════════════════════════════════════════╝
-
-✅ RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
-INFO: Uvicorn running on http://0.0.0.0:8000
+Attendee ID: {YOUR_ATTENDEE_ID}
+Service: ai-chat-service-{YOUR_ATTENDEE_ID}
+RAG initialized successfully
+Uvicorn running on http://0.0.0.0:8000
 ```
 
-The first start may take longer because the local embedding model must be downloaded into the Codespace.
+The workshop uses:
 
-The application uses:
+- Amazon Nova Micro through LiteLLM for chat completions
+- Deterministic local vectorisation for workshop retrieval
+- ChromaDB for local vector search
 
-- Amazon Nova Micro through the LiteLLM gateway for chat completions
-- `sentence-transformers/all-MiniLM-L6-v2` locally for embeddings
-- ChromaDB for vector search
+No external embedding model is downloaded and no external embedding service is called.
 
-### 4.3 Open the chat interface
+### 5.3 Open the private chat interface
 
-When the application starts, VS Code should detect port `8000`.
+When VS Code detects port `8000`:
 
-1. Select **Open in Browser** in the port notification.
+1. Select **Open in Browser**.
 2. If the notification does not appear, open the **Ports** tab.
 3. Find port `8000`.
-4. Select the globe icon.
+4. Confirm its visibility is **Private**.
+5. Select the globe icon.
 
-### 4.4 Test the application with RAG enabled
+Do not change the port visibility to **Public**.
 
-In the chat interface, make sure **Use Knowledge Base (RAG)** is enabled.
+### 5.4 Test with RAG enabled
+
+Make sure **Use Knowledge Base (RAG)** is enabled.
 
 Send:
 
@@ -244,13 +339,13 @@ Send:
 What is Dynatrace?
 ```
 
-You should receive:
+Verify that you receive:
 
 - An AI-generated response
-- A list of knowledge-base sources below the response
-- Your attendee ID displayed in the interface
+- Knowledge-base sources
+- Your Workshop ID in the interface
 
-### 4.5 Test the application without RAG
+### 5.5 Test with RAG disabled
 
 Disable **Use Knowledge Base (RAG)** and send:
 
@@ -258,11 +353,9 @@ Disable **Use Knowledge Base (RAG)** and send:
 What is OpenTelemetry?
 ```
 
-You should receive another AI-generated response, this time without retrieving context from the local knowledge base.
+Verify that you receive an AI-generated response without knowledge-base retrieval.
 
-Both modes must work before continuing.
-
-### 4.6 Stop the application
+### 5.6 Stop the application
 
 Return to the terminal and press:
 
@@ -276,17 +369,25 @@ Ctrl+C
 
 Before proceeding to Lab 1, verify that:
 
-- [ ] Your attendee ID is set in the workshop sidebar
-- [ ] Your Codespace is running
-- [ ] The `.env` file contains all instructor-provided values
+- [ ] You selected a recognisable Workshop ID in the guide sidebar
+- [ ] The Codespace setup completed
+- [ ] `.env` was created automatically
+- [ ] Every `PASTE_HERE` value was replaced
+- [ ] You ran the personalised `configure.sh` command
+- [ ] `.env` now contains your Workshop ID
+- [ ] The service name is `ai-chat-service-{YOUR_ATTENDEE_ID}`
 - [ ] `LLM_BASE_URL` ends with `/v1`
 - [ ] `DT_ENDPOINT` ends with `/api/v2/otlp`
-- [ ] `.devcontainer/configure.sh` completes successfully
-- [ ] You reloaded the VS Code window
+- [ ] `LLM_API_KEY` is configured
+- [ ] `DT_API_TOKEN` is configured
+- [ ] `DT_MCP_BEARER_TOKEN` is configured
+- [ ] You ran **Developer: Reload Window**
+- [ ] You opened a new terminal after the reload
 - [ ] The application starts without errors
-- [ ] The local embedding model loads successfully
-- [ ] The chat works with RAG enabled
-- [ ] The chat works with RAG disabled
+- [ ] The RAG index initialises without an external model download
+- [ ] Chat works with RAG enabled
+- [ ] Chat works with RAG disabled
+- [ ] Port `8000` remains private
 
 ---
 
@@ -294,132 +395,124 @@ Before proceeding to Lab 1, verify that:
 
 ### `.env` does not exist
 
-Run:
+From the repository root, run:
 
 ```bash
 bash .devcontainer/setup.sh
 ```
 
-Then open the newly created `.env` file and enter the instructor-provided values.
+Then open the generated `.env` file.
 
-### `configure.sh` reports an empty variable
+### `configure.sh` says that the Workshop ID is missing
 
-Open `.env` and confirm that every required field contains a value.
+Do not run the generic command without an ID.
 
-Check the variable names carefully:
+Return to this guide and copy the personalised command:
+
+```bash
+bash .devcontainer/configure.sh --attendee-id={YOUR_ATTENDEE_ID}
+```
+
+### `configure.sh` reports `PASTE_HERE`
+
+Open `.env` and replace every remaining `PASTE_HERE` value with the corresponding instructor-provided value.
+
+Save the file and rerun the same personalised command.
+
+### Invalid Workshop ID
+
+Use only:
+
+- Lowercase letters
+- Numbers
+- Hyphens
+
+Do not use spaces or an email address.
+
+Valid examples:
 
 ```text
-ATTENDEE_ID
-LLM_BASE_URL
-LLM_API_KEY
-LLM_CHAT_MODEL
-DT_ENDPOINT
-DT_API_TOKEN
-DT_MCP_BEARER_TOKEN
+marc-mas
+acme-alex
+partner07
 ```
 
-Save the file and run:
+### `LLM_BASE_URL must end with /v1`
 
-```bash
-bash .devcontainer/configure.sh
+Use the exact gateway URL provided by the instructor. Its final path must be:
+
+```text
+/v1
 ```
 
-### `configure.sh` cannot be executed
+### `DT_ENDPOINT must end with /api/v2/otlp`
 
-Run it explicitly with Bash:
+Use the full Dynatrace OTLP endpoint supplied by the instructor. Do not add `/v1/traces` or `/v1/logs` manually.
 
-```bash
-bash .devcontainer/configure.sh
+### Token-prefix warning
+
+Expected token formats are:
+
+```text
+LLM_API_KEY=sk-workshop-...
+DT_API_TOKEN=dt0c01....
+DT_MCP_BEARER_TOKEN=dt0s16....
 ```
 
-If required, make it executable:
+A warning means the value may have been copied incorrectly. Check the instructor credential block before continuing.
 
-```bash
-chmod +x .devcontainer/configure.sh
-```
+### Application authentication fails or returns `No connected db`
 
-### The LLM gateway cannot be reached
+This usually means `LLM_API_KEY` does not match the current LiteLLM gateway key.
 
-Confirm that:
-
-1. `LLM_BASE_URL` is exactly the value provided by the instructor.
-2. The URL ends with `/v1`.
-3. The application is running inside the GitHub Codespace.
-4. The workshop gateway is running.
-
-The gateway uses port `4000`. Some corporate networks block this port from local computers, but the application runs from the Codespace rather than from your local computer.
-
-### Authentication fails or `No connected db` appears
-
-This usually means that `LLM_API_KEY` does not match the gateway key.
-
-1. Copy the key again from the instructor-provided credentials.
+1. Copy the key again from the instructor credential block.
 2. Check for missing or additional characters.
-3. Do not add quotes around the value.
+3. Do not add quotes.
 4. Save `.env`.
-5. Run `bash .devcontainer/configure.sh` again.
+5. Rerun the personalised configuration command.
 6. Restart the application.
 
 ### RAG initialisation fails
 
-Check the complete terminal error.
-
-Then verify that the local embedding dependencies are installed:
-
-```bash
-python -c "from langchain_huggingface import HuggingFaceEmbeddings; print('Local embeddings available')"
-```
-
-If the import fails, run:
+1. Read the complete terminal error.
+2. Run:
 
 ```bash
-pip install -r app/requirements.txt
+python -m py_compile app/main.py
 ```
 
-Then restart the application:
-
-```bash
-python app/main.py
-```
+3. Confirm that the application uses the workshop's deterministic local vectoriser.
+4. Confirm that no old Hugging Face or sentence-transformers dependency remains.
+5. Ask the instructor for assistance if the error continues.
 
 ### Port 8000 does not open
 
-1. Confirm that the application is still running.
-2. Open the **Ports** tab in VS Code.
-3. Confirm that port `8000` is listed.
-4. Select the globe icon next to port `8000`.
+1. Confirm that `python app/main.py` is still running.
+2. Open the **Ports** tab.
+3. Confirm port `8000` is present.
+4. Confirm visibility is **Private**.
+5. Select the globe icon.
 
-### The application reports an incorrect attendee ID
+### Environment values are missing after configuration
 
-1. Stop the application.
-2. Open `.env`.
-3. Correct `ATTENDEE_ID`.
-4. Save the file.
-5. Run:
+1. Confirm that `configure.sh` displayed `CONFIGURATION COMPLETE`.
+2. Run **Developer: Reload Window**.
+3. Open a new terminal.
+4. Run the non-secret verification commands from Step 4.1.
 
-```bash
-bash .devcontainer/configure.sh
-```
+### Dynatrace MCP is not available later in Lab 3
 
-6. Open a new terminal.
-7. Restart the application.
-
-### Dynatrace configuration is not detected
-
-Confirm that `.env` contains:
-
-```bash
-DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
-DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED_VALUE
-```
-
-The ingest token must start with `dt0c01` and have the permissions configured by the instructor.
+1. Confirm that `DT_MCP_BEARER_TOKEN` was configured.
+2. Confirm that `.vscode/mcp.json` exists.
+3. Rerun the personalised configuration command.
+4. Run **Developer: Reload Window**.
+5. Open Copilot Chat after the reload.
 
 ---
 
 ## 🎉 Great Job!
 
-Your Codespace, LLM gateway, local embedding model, and Dynatrace configuration are ready.
+Your Workshop ID, Codespace, LiteLLM gateway, local RAG retrieval and Dynatrace credentials are configured.
 
 In Lab 1, you will add OpenLLMetry instrumentation and begin sending AI traces to Dynatrace.
 
