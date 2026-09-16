@@ -1,0 +1,115 @@
+name: Update MCP Token
+
+on:
+  workflow_dispatch:
+    inputs:
+      mcp_token:
+        description: 'Dynatrace Platform token for MCP (required)'
+        required: true
+        type: string
+      notify:
+        description: 'Create a summary confirming the update'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  update-mcp-token:
+    name: Update MCP Bearer Token
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Validate Configuration
+        run: |
+          if [ -z "${{ vars.AZURE_FUNCTION_APP_NAME }}" ]; then
+            echo "❌ Error: AZURE_FUNCTION_APP_NAME variable is not set"
+            echo "Please set it in Settings → Secrets and variables → Actions → Variables"
+            exit 1
+          fi
+          if [ -z "${{ secrets.ADMIN_SECRET }}" ]; then
+            echo "❌ Error: ADMIN_SECRET secret is not set"
+            echo "This must match the ADMIN_SECRET configured in the Azure Function App Settings"
+            exit 1
+          fi
+          echo "✅ Configuration validated"
+          echo "   Function App: ${{ vars.AZURE_FUNCTION_APP_NAME }}"
+
+      - name: Validate MCP Token Input
+        run: |
+          if [ -z "${{ inputs.mcp_token }}" ]; then
+            echo "❌ Error: MCP token is required"
+            exit 1
+          fi
+          TOKEN_LENGTH=${#INPUT_TOKEN}
+          if [ ${#INPUT_TOKEN} -lt 10 ]; then
+            echo "❌ Error: MCP token appears too short. Please verify you copied the full token."
+            exit 1
+          fi
+          echo "✅ MCP token provided"
+        env:
+          INPUT_TOKEN: ${{ inputs.mcp_token }}
+
+      - name: Update MCP Token via Function API
+        run: |
+          echo "🔄 Updating MCP bearer token via Azure Function API..."
+          
+          FUNCTION_APP="${{ vars.AZURE_FUNCTION_APP_NAME }}"
+          FUNCTION_URL="https://${FUNCTION_APP}.azurewebsites.net/api/update-mcp-token"
+          
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "admin_secret": "${{ secrets.ADMIN_SECRET }}",
+              "mcp_token": "${{ inputs.mcp_token }}"
+            }' \
+            "${FUNCTION_URL}")
+          
+          RESPONSE=$(cat /tmp/response.txt)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ MCP bearer token updated successfully!"
+            echo "$RESPONSE"
+          else
+            echo "❌ Failed to update MCP token. HTTP code: $HTTP_CODE"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+      - name: Verify Update
+        run: |
+          echo "🔍 Verifying the secrets server is healthy..."
+          
+          FUNCTION_APP="${{ vars.AZURE_FUNCTION_APP_NAME }}"
+          FUNCTION_URL="https://${FUNCTION_APP}.azurewebsites.net"
+          
+          # Test health endpoint
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${FUNCTION_URL}/api/health")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Function app is healthy and responding"
+          else
+            echo "⚠️ Function app health check returned HTTP $HTTP_CODE"
+          fi
+
+      - name: Create Summary
+        if: ${{ inputs.notify }}
+        run: |
+          echo "## 🔑 MCP Bearer Token Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The Dynatrace MCP bearer token has been successfully updated in the secrets server." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Function App | \`${{ vars.AZURE_FUNCTION_APP_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ℹ️ How It Works" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "When attendees run \`fetch-secrets.sh\`, this token will automatically be distributed to their Codespace." >> $GITHUB_STEP_SUMMARY
+          echo "They can then use it for Lab 3 (Dynatrace MCP) without any additional configuration." >> $GITHUB_STEP_SUMMARY

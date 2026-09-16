@@ -1,0 +1,125 @@
+name: Rotate Workshop Token
+
+on:
+  workflow_dispatch:
+    inputs:
+      token:
+        description: 'Workshop token (leave empty to auto-generate, or enter a simple word like "dynatrace2026")'
+        required: false
+        type: string
+      notify:
+        description: 'Create a summary with the new token'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  rotate-token:
+    name: Rotate Workshop Token
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Validate Configuration
+        run: |
+          if [ -z "${{ vars.AZURE_FUNCTION_APP_NAME }}" ]; then
+            echo "❌ Error: AZURE_FUNCTION_APP_NAME variable is not set"
+            echo "Please set it in Settings → Secrets and variables → Actions → Variables"
+            exit 1
+          fi
+          if [ -z "${{ secrets.ADMIN_SECRET }}" ]; then
+            echo "❌ Error: ADMIN_SECRET secret is not set"
+            echo "This must match the ADMIN_SECRET configured in the Azure Function App Settings"
+            exit 1
+          fi
+          echo "✅ Configuration validated"
+          echo "   Function App: ${{ vars.AZURE_FUNCTION_APP_NAME }}"
+
+      - name: Generate or Use Provided Token
+        id: token
+        run: |
+          if [ -n "${{ inputs.token }}" ]; then
+            NEW_TOKEN="${{ inputs.token }}"
+            echo "📝 Using provided token"
+          else
+            # Generate a memorable random token
+            ADJECTIVES=("swift" "bright" "cosmic" "digital" "quantum" "stellar" "neural" "cyber")
+            NOUNS=("phoenix" "falcon" "tiger" "dragon" "eagle" "wolf" "lion" "hawk")
+            YEAR=$(date +%Y)
+            ADJ=${ADJECTIVES[$RANDOM % ${#ADJECTIVES[@]}]}
+            NOUN=${NOUNS[$RANDOM % ${#NOUNS[@]}]}
+            NEW_TOKEN="${ADJ}${NOUN}${YEAR}"
+            echo "🎲 Generated random token"
+          fi
+          
+          echo "token=${NEW_TOKEN}" >> $GITHUB_OUTPUT
+          echo "::add-mask::${NEW_TOKEN}"
+
+      - name: Rotate Token via Function API
+        run: |
+          echo "🔄 Rotating workshop token via Azure Function API..."
+          
+          FUNCTION_APP="${{ vars.AZURE_FUNCTION_APP_NAME }}"
+          FUNCTION_URL="https://${FUNCTION_APP}.azurewebsites.net/api/rotate-token"
+          
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "admin_secret": "${{ secrets.ADMIN_SECRET }}",
+              "new_token": "${{ steps.token.outputs.token }}"
+            }' \
+            "${FUNCTION_URL}")
+          
+          RESPONSE=$(cat /tmp/response.txt)
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Workshop token rotated successfully!"
+            echo "$RESPONSE"
+          else
+            echo "❌ Failed to rotate token. HTTP code: $HTTP_CODE"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+      - name: Verify Update
+        run: |
+          echo "🔍 Verifying the update..."
+          
+          FUNCTION_APP="${{ vars.AZURE_FUNCTION_APP_NAME }}"
+          FUNCTION_URL="https://${FUNCTION_APP}.azurewebsites.net"
+          
+          # Test health endpoint
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${FUNCTION_URL}/api/health")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Function app is healthy and responding"
+          else
+            echo "⚠️ Function app health check returned HTTP $HTTP_CODE"
+          fi
+
+      - name: Create Summary
+        if: ${{ inputs.notify }}
+        run: |
+          echo "## 🔑 Workshop Token Rotated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The workshop token has been successfully updated." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### New Token" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.token.outputs.token }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Function App | \`${{ vars.AZURE_FUNCTION_APP_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Updated | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Share with Attendees" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "When attendees create their Codespace, they'll be prompted for this token." >> $GITHUB_STEP_SUMMARY
