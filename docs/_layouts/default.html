@@ -7,14 +7,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    {{ '/assets/css/style.css' | relative_url }}
-    {{ '/assets/images/favicon.svg' | relative_url }}
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/favicon.svg' | relative_url }}">
 </head>
 <body>
     <!-- Header -->
     <header class="header">
         <div class="header-container">
-            {{ '/' | relative_url }}" class="logo">
+            <a href="{{ '/' | relative_url }}" class="logo">
                 <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2"/>
                     <circle cx="16" cy="16" r="6" fill="currentColor"/>
@@ -58,48 +58,48 @@
                     <h3 class="sidebar-title">Workshop Labs</h3>
                     <ul class="sidebar-nav">
                         <li>
-                            {{ '/' | relative_url }}
+                            <a href="{{ '/' | relative_url }}" class="sidebar-link {% if page.url == '/' or page.url == '/index.html' %}active{% endif %}">
                                 <span class="sidebar-icon">🏠</span>
                                 Home
                             </a>
                         </li>
                         <li>
-                            {{ '/lab0-setup' | relative_url }}
+                            <a href="{{ '/lab0-setup' | relative_url }}" class="sidebar-link {% if page.url contains 'lab0' %}active{% endif %}">
                                 <span class="sidebar-icon">⚙️</span>
                                 Lab 0: Setup
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
-                            {{ '/lab1-instrumentation' | relative_url }}
+                            <a href="{{ '/lab1-instrumentation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab1' %}active{% endif %}">
                                 <span class="sidebar-icon">🔬</span>
                                 Lab 1: Instrumentation
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
-                            {{ '/lab2-explore-traces' | relative_url }}" class="sidebar-link {% if page.url contains 'lab2' %}active{% endif %}">
+                            <a href="{{ '/lab2-explore-traces' | relative_url }}" class="sidebar-link {% if page.url contains 'lab2' %}active{% endif %}">
                                 <span class="sidebar-icon">🔍</span>
                                 Lab 2: Explore Traces
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            {{ '/lab3-dynatrace-mcp' | relative_url }}
+                            <a href="{{ '/lab3-dynatrace-mcp' | relative_url }}" class="sidebar-link {% if page.url contains 'lab3' %}active{% endif %}">
                                 <span class="sidebar-icon">🤖</span>
                                 Lab 3: Dynatrace MCP
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            {{ '/lab4-automation' | relative_url }}
+                            <a href="{{ '/lab4-automation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab4' %}active{% endif %}">
                                 <span class="sidebar-icon">⚡</span>
                                 Lab 4: Automation
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            {{ '/resources' | relative_url }}" class="sidebar-link {% if page.url contains 'resources' %}active{% endif %}">
+                            <a href="{{ '/resources' | relative_url }}" class="sidebar-link {% if page.url contains 'resources' %}active{% endif %}">
                                 <span class="sidebar-icon">📚</span>
                                 Resources
                             </a>
