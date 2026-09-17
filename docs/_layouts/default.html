@@ -7,14 +7,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-    <link rel="icon" type="image/svg+xml" href="{{ '/assets/images/favicon.svg' | relative_url }}">
+    {{ '/assets/css/style.css' | relative_url }}
+    {{ '/assets/images/favicon.svg' | relative_url }}
 </head>
 <body>
     <!-- Header -->
     <header class="header">
         <div class="header-container">
-            <a href="{{ '/' | relative_url }}" class="logo">
+            {{ '/' | relative_url }}" class="logo">
                 <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2"/>
                     <circle cx="16" cy="16" r="6" fill="currentColor"/>
@@ -44,9 +44,9 @@
                 <div class="attendee-id-container">
                     <label class="attendee-id-label">Your Attendee ID</label>
                     <div class="attendee-id-input-wrapper">
-                        <input type="text" 
-                               id="attendee-id-input" 
-                               class="attendee-id-input" 
+                        <input type="text"
+                               id="attendee-id-input"
+                               class="attendee-id-input"
                                placeholder="e.g., jsmith"
                                autocomplete="off">
                         <button class="attendee-id-btn" onclick="updateAttendeeId()">Set</button>
@@ -58,48 +58,48 @@
                     <h3 class="sidebar-title">Workshop Labs</h3>
                     <ul class="sidebar-nav">
                         <li>
-                            <a href="{{ '/' | relative_url }}" class="sidebar-link {% if page.url == '/' or page.url == '/index.html' %}active{% endif %}">
+                            {{ '/' | relative_url }}
                                 <span class="sidebar-icon">🏠</span>
                                 Home
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/lab0-setup' | relative_url }}" class="sidebar-link {% if page.url contains 'lab0' %}active{% endif %}">
+                            {{ '/lab0-setup' | relative_url }}
                                 <span class="sidebar-icon">⚙️</span>
                                 Lab 0: Setup
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/lab1-instrumentation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab1' %}active{% endif %}">
+                            {{ '/lab1-instrumentation' | relative_url }}
                                 <span class="sidebar-icon">🔬</span>
                                 Lab 1: Instrumentation
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/lab2-explore-traces' | relative_url }}" class="sidebar-link {% if page.url contains 'lab2' %}active{% endif %}">
+                            {{ '/lab2-explore-traces' | relative_url }}" class="sidebar-link {% if page.url contains 'lab2' %}active{% endif %}">
                                 <span class="sidebar-icon">🔍</span>
                                 Lab 2: Explore Traces
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/lab3-dynatrace-mcp' | relative_url }}" class="sidebar-link {% if page.url contains 'lab3' %}active{% endif %}">
+                            {{ '/lab3-dynatrace-mcp' | relative_url }}
                                 <span class="sidebar-icon">🤖</span>
                                 Lab 3: Dynatrace MCP
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/lab4-automation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab4' %}active{% endif %}">
+                            {{ '/lab4-automation' | relative_url }}
                                 <span class="sidebar-icon">⚡</span>
                                 Lab 4: Automation
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{{ '/resources' | relative_url }}" class="sidebar-link {% if page.url contains 'resources' %}active{% endif %}">
+                            {{ '/resources' | relative_url }}" class="sidebar-link {% if page.url contains 'resources' %}active{% endif %}">
                                 <span class="sidebar-icon">📚</span>
                                 Resources
                             </a>
@@ -277,7 +277,7 @@
             padding: 1px 6px;
             border-radius: 3px;
         }
-        
+
         /* Code block copy button */
         .code-block-wrapper {
             position: relative;
@@ -322,10 +322,12 @@
     </style>
 
     <script>
+        // ═══════════════════════════════════════════════════════════════════
         // Mobile menu toggle
+        // ═══════════════════════════════════════════════════════════════════
         const toggle = document.querySelector('.mobile-menu-toggle');
         const sidebar = document.querySelector('.sidebar');
-        
+
         toggle?.addEventListener('click', () => {
             sidebar.classList.toggle('open');
         });
@@ -337,7 +339,9 @@
             }
         });
 
-        // Lightbox functionality
+        // ═══════════════════════════════════════════════════════════════════
+        // Lightbox
+        // ═══════════════════════════════════════════════════════════════════
         function openLightbox(imgSrc) {
             const overlay = document.getElementById('lightbox-overlay');
             const lightboxImg = document.getElementById('lightbox-img');
@@ -364,9 +368,16 @@
             img.addEventListener('click', () => openLightbox(img.src));
         });
 
-        // Attendee ID replacement functionality
+        // ═══════════════════════════════════════════════════════════════════
+        // Attendee ID replacement
+        //
+        // Jekyll's syntax highlighter splits {YOUR_ATTENDEE_ID} across several
+        // span elements inside fenced code blocks, so no single text node ever
+        // contains the full placeholder. Code elements are therefore handled
+        // separately from prose text nodes.
+        // ═══════════════════════════════════════════════════════════════════
         const ATTENDEE_STORAGE_KEY = 'workshop_attendee_id';
-        const PLACEHOLDER_PATTERN = /\{YOUR_ATTENDEE_ID\}/g;
+        const PLACEHOLDER = '{YOUR_ATTENDEE_ID}';
 
         function getStoredAttendeeId() {
             return localStorage.getItem(ATTENDEE_STORAGE_KEY) || '';
@@ -376,39 +387,73 @@
             localStorage.setItem(ATTENDEE_STORAGE_KEY, id);
         }
 
+        // Escape via the DOM so no HTML entities appear in this source file.
+        function escapeHtml(text) {
+            const element = document.createElement('div');
+            element.textContent = text;
+            return element.innerHTML;
+        }
+
+        function buildReplacedHtml(text, attendeeId) {
+            const badge = '<span class="attendee-replaced">'
+                + escapeHtml(attendeeId)
+                + '</span>';
+
+            return escapeHtml(text).split(PLACEHOLDER).join(badge);
+        }
+
         function replaceAttendeeIdInPage(attendeeId) {
             if (!attendeeId) return;
-            
-            // Find all text nodes and code blocks that contain the placeholder
-            const walker = document.createTreeWalker(
-                document.querySelector('.content') || document.body,
-                NodeFilter.SHOW_TEXT,
-                null,
-                false
-            );
-            
-            const textNodes = [];
-            while (walker.nextNode()) {
-                if (PLACEHOLDER_PATTERN.test(walker.currentNode.textContent)) {
-                    textNodes.push(walker.currentNode);
+
+            const root = document.querySelector('.content') || document.body;
+
+            // 1. Code elements, including syntax-highlighted blocks.
+            root.querySelectorAll('code').forEach((code) => {
+                if (!code.dataset.attendeeTemplate) {
+                    if (code.textContent.indexOf(PLACEHOLDER) === -1) return;
+                    code.dataset.attendeeTemplate = code.textContent;
                 }
-            }
-            
-            textNodes.forEach(node => {
-                const span = document.createElement('span');
-                span.innerHTML = node.textContent.replace(
-                    PLACEHOLDER_PATTERN,
-                    `<span class="attendee-replaced">${attendeeId}</span>`
+
+                code.innerHTML = buildReplacedHtml(
+                    code.dataset.attendeeTemplate,
+                    attendeeId
                 );
+            });
+
+            // 2. Prose text nodes outside code blocks.
+            const walker = document.createTreeWalker(
+                root,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode(node) {
+                        if (node.parentElement.closest('code')) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return node.nodeValue.indexOf(PLACEHOLDER) !== -1
+                            ? NodeFilter.FILTER_ACCEPT
+                            : NodeFilter.FILTER_REJECT;
+                    }
+                }
+            );
+
+            const textNodes = [];
+            let current;
+
+            while ((current = walker.nextNode())) {
+                textNodes.push(current);
+            }
+
+            textNodes.forEach((node) => {
+                const span = document.createElement('span');
+                span.innerHTML = buildReplacedHtml(node.nodeValue, attendeeId);
                 node.parentNode.replaceChild(span, node);
             });
         }
 
         function updateAttendeeId() {
             const input = document.getElementById('attendee-id-input');
-            const status = document.getElementById('attendee-id-status');
             const id = input.value.trim();
-            
+
             if (id) {
                 setStoredAttendeeId(id);
                 // Reload to apply changes cleanly
@@ -426,7 +471,7 @@
             const storedId = getStoredAttendeeId();
             const input = document.getElementById('attendee-id-input');
             const status = document.getElementById('attendee-id-status');
-            
+
             if (input && storedId) {
                 input.value = storedId;
                 if (status) {
@@ -443,15 +488,16 @@
             }
         });
 
-        // Copy button functionality for code blocks
+        // ═══════════════════════════════════════════════════════════════════
+        // Copy buttons for code blocks
+        // ═══════════════════════════════════════════════════════════════════
         function addCopyButtons() {
             const codeBlocks = document.querySelectorAll('.content pre');
-            
+
             codeBlocks.forEach((pre) => {
                 // Skip if already has a copy button
                 if (pre.querySelector('.copy-code-btn')) return;
-                
-                // Create copy button
+
                 const copyBtn = document.createElement('button');
                 copyBtn.className = 'copy-code-btn';
                 copyBtn.innerHTML = `
@@ -461,11 +507,12 @@
                     </svg>
                     <span>Copy</span>
                 `;
-                
+
                 copyBtn.addEventListener('click', async () => {
+                    // Read at click time so the replaced attendee ID is copied.
                     const code = pre.querySelector('code');
                     const text = code ? code.textContent : pre.textContent;
-                    
+
                     try {
                         await navigator.clipboard.writeText(text);
                         copyBtn.classList.add('copied');
@@ -475,7 +522,7 @@
                             </svg>
                             <span>Copied!</span>
                         `;
-                        
+
                         setTimeout(() => {
                             copyBtn.classList.remove('copied');
                             copyBtn.innerHTML = `
@@ -498,7 +545,7 @@
                         `;
                     }
                 });
-                
+
                 pre.appendChild(copyBtn);
             });
         }
