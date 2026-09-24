@@ -263,37 +263,30 @@ SAMPLE_DOCUMENTS = [
     and it also holds lookup tables that queries can join against.
     """,
     """
-    DQL, the Dynatrace Query Language, is how you query data held in Grail.
-    A DQL query names a data source and then passes records through a pipeline
-    of commands joined by the pipe character. DQL is not SQL. There is no
-    SELECT, no FROM, no WHERE and no GROUP BY, and no semicolon at the end.
-    The order in which you write the commands is the order they run in.
-    """,
-    """
-    A typical DQL query looks like this:
-
+    DQL, the Dynatrace Query Language, queries data stored in Grail. A query
+    names a data source, then pipes records through commands. Example:
     fetch logs
     | filter loglevel == "ERROR"
     | summarize error_count = count(), by:{host.name}
     | sort error_count desc
     | limit 10
-
-    It reads top to bottom: fetch the logs, keep the error records, count them
-    per host, sort by that count, return the first ten rows.
+    Read it top to bottom: fetch logs, keep error records, count per host,
+    sort, return ten rows.
     """,
-    """
+     """
     Common DQL commands are fetch to choose a data source such as logs, spans,
     events or metrics; filter to keep matching records; fields and fieldsAdd to
     select or calculate columns; summarize to aggregate with functions like
     count, sum, avg and max; sort and limit to order and trim the result;
     lookup to enrich records from a lookup table; and makeTimeseries to turn
-    records into a time series for charting.
+    records into a time series for charting. They combine like this:
+    fetch logs | filter loglevel == "ERROR" | summarize count(), by:{host.name}
     """,
     """
     In DQL, comparison uses a double equals sign and string values are written
     in double quotes, for example filter service.name == "checkout". Aggregates
     in summarize are given a name, as in total_tokens = sum(gen_ai.usage
-    .input_tokens). Grouping is written as by:{field}, not GROUP BY. Field
+    .input_tokens). Grouping is written as by:{field}. Field
     names that contain dots are written as-is and do not need quoting.
     """,
     """
@@ -433,7 +426,7 @@ llm = None
 
 def format_docs(docs):
     """Format retrieved documents into a single string"""
-    return "\n\n".join(doc.page_content for doc in docs)
+    return "\n\n---\n\n".join(doc.page_content.strip() for doc in docs)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Error Simulation for Workshop Demos
@@ -678,6 +671,47 @@ This workshop covers hands-on exercises in AI observability:
 - **Lab 2 - Trace Exploration**: Analyze AI traces in Dynatrace, understand spans and attributes
 - **Lab 3 - Dynatrace MCP**: Use Model Context Protocol for agentic AI workflows with Copilot
 
+### 6. DQL Syntax Reference
+
+Use this exact syntax when writing DQL. Do not invent alternatives.
+
+A query starts with a data source and pipes records through commands:
+
+fetch logs
+| filter loglevel == "ERROR"
+| summarize error_count = count(), by:{{host.name}}
+| sort error_count desc
+| limit 10
+
+Aggregating spans with a calculated field and a lookup:
+
+fetch spans
+| filter service.name == "checkout"
+| filter isNotNull(gen_ai.usage.input_tokens)
+| summarize total_input = sum(gen_ai.usage.input_tokens),
+    request_count = count(),
+    by:{{gen_ai.response.model}}
+| fieldsAdd cost = total_input * 0.035 / 1000000.0
+| sort total_input desc
+
+Charting over time:
+
+fetch spans
+| filter service.name == "checkout"
+| makeTimeseries request_count = count(), interval: 1m
+
+Syntax rules:
+- Commands are joined by the pipe character, one per line.
+- Comparison uses ==, and string values use double quotes.
+- filter takes a bare expression: filter loglevel == "ERROR"
+- summarize takes named aggregates: summarize total = sum(field)
+- Braces appear only in the by: clause, as by:{{field.name}}
+- Field names containing dots are written as-is, unquoted.
+- There is no semicolon at the end of a query.
+
+Available commands: fetch, filter, fields, fieldsAdd, summarize, sort,
+limit, lookup, makeTimeseries, parse, dedup, expand.
+
 ## Response Guidelines
 
 When answering questions, follow these principles:
@@ -694,8 +728,14 @@ When answering questions, follow these principles:
 ## Context from Knowledge Base
 {context}
 
-Based on the context above and your expertise, provide a helpful response to the user's question.
-If the context doesn't contain relevant information, draw upon your knowledge of the topics listed above.
+Answer using only the context provided above.
+
+If the context does not contain what is needed, say so plainly and state what is
+missing. Do not fill the gap from prior knowledge.
+
+When the question concerns DQL, reproduce the syntax exactly as it appears in the
+context. Do not introduce command words, punctuation or brackets that do not
+appear in the context examples.
 """
 
 @task(name="generate_response")
@@ -792,7 +832,7 @@ def initialize_rag():
 
         # Retrieve the three most relevant chunks for each RAG request.
         retriever = vectorstore.as_retriever(
-            search_kwargs={"k": 3}
+            search_kwargs={"k": 5}
         )
 
         # Initialise the OpenAI-compatible LiteLLM chat client.
