@@ -22,6 +22,8 @@ By the end of this lab, you will be able to:
 - Generate traces from RAG and direct LLM requests
 - Verify that the application is exporting telemetry successfully
 
+---
+
 ## Step 1: Enable the OpenLLMetry Dependency
 
 ### 1.1 Edit requirements.txt
@@ -67,6 +69,8 @@ Expected result:
 ```text
 Traceloop is installed
 ```
+
+---
 
 ## Step 2: Add Dynatrace Instrumentation
 
@@ -134,6 +138,8 @@ Save `app/main.py`.
 
 > **Position matters.** Add this code where the marker was, which is after `load_dotenv()` has run. Do not move it to the very top of the file, or the environment configuration will not be loaded yet.
 
+---
+
 ## Step 3: Understand What You Added
 
 Three things in that code are worth understanding before you continue.
@@ -155,6 +161,8 @@ Authorization: Api-Token dt0c01...
 Do not change this to `Bearer`. The MCP platform token you will use in Lab 3 is a different credential with a different scheme, and swapping them is a common cause of a 401.
 
 **Metric temporality is set before initialisation.** The `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` line configures how exported metrics are reported, and it has to be set before `Traceloop.init()` runs.
+
+---
 
 ## Step 4: Start the Instrumented Application
 
@@ -193,6 +201,8 @@ Dynatrace configuration not found
 ```
 
 That message means `DT_ENDPOINT` or `DT_API_TOKEN` is missing from `.env`.
+
+---
 
 ## Step 5: Generate Trace Data
 
@@ -235,6 +245,8 @@ Generating both kinds of traffic now will make the differences easier to identif
 
 > **Tip:** Automatic span names and attributes can vary between instrumentation versions. In Lab 2, identify spans by their position and purpose rather than by one exact name.
 
+---
+
 ## Step 6: Check for Export Errors
 
 Review the terminal after generating the requests.
@@ -243,9 +255,14 @@ The application does not print a success message for every exported batch, so th
 
 If no export errors appear, continue to the checkpoint.
 
+---
+
+<div class="lab-checkpoint" markdown="1">
+
 ## Checkpoint
 
-Before proceeding to Lab 2, verify that:
+Work through these before moving on. If every item is true, you are ready for Lab 2.
+{: .checkpoint-intro }
 
 - `traceloop-sdk==0.50.1` is enabled in `app/requirements.txt`, and the OpenTelemetry packages were left untouched
 - `pip install -r app/requirements.txt` completed successfully
@@ -254,9 +271,19 @@ Before proceeding to Lab 2, verify that:
 - You generated at least three RAG requests and one request with RAG disabled
 - No repeated OTLP export errors appear in the terminal
 
+<div class="checkpoint-actions" markdown="1">
+[Something isn't working](#troubleshooting){: .ws-btn-secondary }
+[Continue to Lab 2](lab2-explore-traces){: .ws-btn-primary }
+</div>
+
+</div>
+
+<div class="appendix" markdown="1">
+
 ## Troubleshooting
 
-### ModuleNotFoundError: No module named 'traceloop'
+<details markdown="1">
+<summary>ModuleNotFoundError: No module named 'traceloop'</summary>
 
 Confirm that the package is enabled in `app/requirements.txt`:
 
@@ -270,11 +297,17 @@ Then run `pip install -r app/requirements.txt` and verify with:
 python -c "from traceloop.sdk import Traceloop; print('Traceloop is installed')"
 ```
 
-### Dependency conflicts after installing
+</details>
+
+<details markdown="1">
+<summary>Dependency conflicts after installing</summary>
 
 If pip reports conflicting OpenTelemetry versions, the pinned packages in `requirements.txt` were probably edited or duplicated. Restore the file so that only the `traceloop-sdk` line was uncommented, then reinstall.
 
-### Dynatrace configuration not found
+</details>
+
+<details markdown="1">
+<summary>Dynatrace configuration not found</summary>
 
 Open `.env` and confirm that both fields contain values:
 
@@ -285,7 +318,10 @@ DT_API_TOKEN=dt0c01....
 
 Then stop and restart the application.
 
-### 401 Unauthorized
+</details>
+
+<details markdown="1">
+<summary>401 Unauthorized</summary>
 
 Check:
 
@@ -295,15 +331,24 @@ Check:
 
 Do not print or share the complete token in the workshop chat.
 
-### 403 Forbidden
+</details>
+
+<details markdown="1">
+<summary>403 Forbidden</summary>
 
 The token may be valid but missing the required ingestion permission. Ask the instructor to verify the token scopes.
 
-### 404 Not Found
+</details>
+
+<details markdown="1">
+<summary>404 Not Found</summary>
 
 Confirm that `DT_ENDPOINT` ends with `/api/v2/otlp`. Do not add `/v1/traces` manually, because the exporter builds the signal-specific path itself.
 
-### The application crashes after adding the code
+</details>
+
+<details markdown="1">
+<summary>The application crashes after adding the code</summary>
 
 Run `python -m py_compile app/main.py` and check that:
 
@@ -312,7 +357,10 @@ Run `python -m py_compile app/main.py` and check that:
 - The `if` and `else` blocks use consistent indentation
 - The original application code was not deleted
 
-### The application works but no traces appear
+</details>
+
+<details markdown="1">
+<summary>The application works but no traces appear</summary>
 
 - Generate several new chat requests.
 - Confirm that Traceloop initialised successfully.
@@ -320,18 +368,35 @@ Run `python -m py_compile app/main.py` and check that:
 - Confirm that the service name contains the correct attendee ID.
 - Expand the time range in Dynatrace and refresh.
 
-### RAG works but no embedding-model span appears
+</details>
+
+<details markdown="1">
+<summary>RAG works but no embedding-model span appears</summary>
 
 This is expected. The workshop generates retrieval vectors locally, using a deterministic hashing function rather than a trained embedding model, so nothing is sent to a hosted embedding endpoint.
 
 Look instead for the `retrieve_documents` task, the ChromaDB query span, and the two chat-model calls.
 
-### More traces appear than expected
+</details>
+
+<details markdown="1">
+<summary>More traces appear than expected</summary>
 
 FastAPI instrumentation, LangChain instrumentation and the Traceloop decorators can each create spans at different levels. In Lab 2, use the parent-child structure to distinguish HTTP spans, workflow spans, task spans, vector-store spans and LLM spans.
+
+</details>
+
+</div>
+
+---
 
 ## Excellent Work
 
 You have instrumented the application and generated both RAG and direct LLM traces.
 
 In Lab 2, you will examine the trace hierarchy, inspect model calls, analyse token usage, and estimate model cost.
+
+<div class="lab-nav">
+  <a href="lab0-setup">← Lab 0: Setup</a>
+  <a href="lab2-explore-traces">Lab 2: Explore Traces →</a>
+</div>

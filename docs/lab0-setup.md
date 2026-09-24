@@ -47,6 +47,8 @@ ai-chat-service-{YOUR_ATTENDEE_ID}
 
 > **Tip:** For a partner workshop, a short pattern such as `company-firstname` is easy to recognise while avoiding email addresses.
 
+---
+
 ## Step 1: Launch Your GitHub Codespace
 
 ### 1.1 Open the workshop environment
@@ -77,6 +79,8 @@ At the end of setup, the terminal should display an **ACTION REQUIRED** section 
 - Replace the block between the PASTE markers with the instructor credential block.
 - Save the file.
 - Run the personalised configuration command shown later in this lab.
+
+---
 
 ## Step 2: Add the Shared Workshop Credentials
 
@@ -145,6 +149,8 @@ Save using:
 - `Cmd+S` on macOS
 - `Ctrl+S` on Windows or Linux
 
+---
+
 ## Step 3: Apply Your Personalised Configuration
 
 ### 3.1 Copy the personalised command
@@ -197,6 +203,8 @@ ATTENDEE_ID={YOUR_ATTENDEE_ID}
 
 Do not edit this value manually after configuration. If you change the Workshop ID in the guide, rerun the newly personalised command.
 
+---
+
 ## Step 4: Reload VS Code
 
 A reload is required so GitHub Copilot and the Dynatrace MCP integration can read the configured MCP credential.
@@ -210,6 +218,8 @@ A reload is required so GitHub Copilot and the Dynatrace MCP integration can rea
 - Open a new terminal.
 
 The Python application reads `.env` directly, but the VS Code reload is still required for the MCP configuration used in Lab 3.
+
+---
 
 ## Step 5: Verify the Sample Application
 
@@ -299,9 +309,14 @@ Return to the terminal and press:
 Ctrl+C
 ```
 
+---
+
+<div class="lab-checkpoint" markdown="1">
+
 ## Checkpoint
 
-Before proceeding to Lab 1, verify that:
+Work through these before moving on. If every item is true, you are ready for Lab 1.
+{: .checkpoint-intro }
 
 - You selected a recognisable Workshop ID in the guide sidebar
 - `.env` contains the instructor values, with no `PASTE_HERE` remaining
@@ -310,9 +325,19 @@ Before proceeding to Lab 1, verify that:
 - The application starts and the RAG index initialises without an external model download
 - Chat works with RAG enabled and disabled, and port 8000 is still **Private**
 
+<div class="checkpoint-actions" markdown="1">
+[Something isn't working](#troubleshooting){: .ws-btn-secondary }
+[Continue to Lab 1](lab1-instrumentation){: .ws-btn-primary }
+</div>
+
+</div>
+
+<div class="appendix" markdown="1">
+
 ## Troubleshooting
 
-### .env does not exist
+<details markdown="1">
+<summary>.env does not exist</summary>
 
 From the repository root, run:
 
@@ -322,7 +347,10 @@ bash .devcontainer/setup.sh
 
 Then open the generated `.env` file.
 
-### configure.sh says that the Workshop ID is missing
+</details>
+
+<details markdown="1">
+<summary>configure.sh says that the Workshop ID is missing</summary>
 
 Do not run the generic command without an ID. Return to this guide and copy the personalised command:
 
@@ -330,11 +358,17 @@ Do not run the generic command without an ID. Return to this guide and copy the 
 bash .devcontainer/configure.sh --attendee-id={YOUR_ATTENDEE_ID}
 ```
 
-### configure.sh reports PASTE_HERE
+</details>
+
+<details markdown="1">
+<summary>configure.sh reports PASTE_HERE</summary>
 
 Open `.env` and replace the remaining placeholder lines with the instructor credential block. Save the file and rerun the same personalised command.
 
-### Invalid Workshop ID
+</details>
+
+<details markdown="1">
+<summary>Invalid Workshop ID</summary>
 
 Use 2 to 31 characters, made up of letters, numbers and hyphens, starting with a letter or a number. Uppercase is converted to lowercase automatically. Do not use spaces or an email address.
 
@@ -346,15 +380,24 @@ acme-alex
 partner07
 ```
 
-### LLM_BASE_URL must end with /v1
+</details>
+
+<details markdown="1">
+<summary>LLM_BASE_URL must end with /v1</summary>
 
 Use the exact gateway URL provided by the instructor. Its final path must be `/v1`.
 
-### DT_ENDPOINT must end with /api/v2/otlp
+</details>
+
+<details markdown="1">
+<summary>DT_ENDPOINT must end with /api/v2/otlp</summary>
 
 Use the full Dynatrace OTLP endpoint supplied by the instructor. Do not add `/v1/traces` or `/v1/logs` manually.
 
-### Token-prefix warning
+</details>
+
+<details markdown="1">
+<summary>Token-prefix warning</summary>
 
 Expected token formats are:
 
@@ -366,7 +409,10 @@ DT_MCP_BEARER_TOKEN=dt0s16....
 
 A warning means the value may have been copied incorrectly. Configuration still completes, so check the instructor credential block before continuing.
 
-### Application authentication fails or returns No connected db
+</details>
+
+<details markdown="1">
+<summary>Application authentication fails or returns No connected db</summary>
 
 This usually means `LLM_API_KEY` does not match the current LiteLLM gateway key.
 
@@ -377,7 +423,10 @@ This usually means `LLM_API_KEY` does not match the current LiteLLM gateway key.
 - Rerun the personalised configuration command.
 - Restart the application.
 
-### RAG initialisation fails
+</details>
+
+<details markdown="1">
+<summary>RAG initialisation fails</summary>
 
 The application stops on purpose if retrieval cannot be initialised, rather than serving degraded results.
 
@@ -386,7 +435,10 @@ The application stops on purpose if retrieval cannot be initialised, rather than
 - Confirm that `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_CHAT_MODEL` are all set in `.env`.
 - Ask the instructor for assistance if the error continues.
 
-### Port 8000 does not open
+</details>
+
+<details markdown="1">
+<summary>Port 8000 does not open</summary>
 
 - Confirm that `python app/main.py` is still running.
 - Open the **Ports** tab.
@@ -394,13 +446,19 @@ The application stops on purpose if retrieval cannot be initialised, rather than
 - Confirm visibility is **Private**.
 - Select the globe icon.
 
-### Environment values are missing after configuration
+</details>
+
+<details markdown="1">
+<summary>Environment values are missing after configuration</summary>
 
 - Confirm that `configure.sh` displayed `CONFIGURATION COMPLETE`.
 - Run **Developer: Reload Window**.
 - Open a new terminal.
 
-### Dynatrace MCP is not available later in Lab 3
+</details>
+
+<details markdown="1">
+<summary>Dynatrace MCP is not available later in Lab 3</summary>
 
 - Confirm that `DT_MCP_BEARER_TOKEN` was configured.
 - Confirm that `.vscode/mcp.json` exists.
@@ -408,8 +466,19 @@ The application stops on purpose if retrieval cannot be initialised, rather than
 - Run **Developer: Reload Window**.
 - Open Copilot Chat after the reload.
 
+</details>
+
+</div>
+
+---
+
 ## Great Job
 
 Your Workshop ID, Codespace, LiteLLM gateway, local RAG retrieval and Dynatrace credentials are configured.
 
 In Lab 1, you will add OpenLLMetry instrumentation and begin sending AI traces to Dynatrace.
+
+<div class="lab-nav">
+  <a href="./">← Home</a>
+  <a href="lab1-instrumentation">Lab 1: Instrumentation →</a>
+</div>

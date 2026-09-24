@@ -122,7 +122,7 @@ The next exercises examine the same service from two perspectives.
 
 <div class="persona-box developer" markdown="1">
 
-### Developer: Investigate a RAG request from the IDE
+### Investigate a RAG request from the IDE
 
 Your goal is to understand:
 
@@ -137,7 +137,7 @@ Your goal is to understand:
 
 <div class="persona-box sre" markdown="1">
 
-### SRE or Platform Engineer: Triage service behaviour
+### Triage service behaviour
 
 Your goal is to determine:
 
@@ -153,9 +153,8 @@ Your goal is to determine:
 
 ---
 
-<div class="persona-box developer" markdown="1">
-
 ## Step 2: Investigate the RAG Pipeline
+{: .step-dev }
 
 ### 2.1 Find recent requests
 
@@ -244,6 +243,7 @@ This investigation should show that a RAG request contains more processing stage
 ---
 
 ## Step 3: Investigate Simulated Errors
+{: .step-dev }
 
 ### 3.1 Generate errors
 
@@ -339,13 +339,10 @@ Copilot can combine the local source code with evidence retrieved through Dynatr
 
 > Always review generated code before applying it. Telemetry can identify behaviour, but a suggested code change still requires engineering judgement.
 
-</div>
-
 ---
 
-<div class="persona-box sre" markdown="1">
-
 ## Step 4: Assess Service Usage
+{: .step-sre }
 
 ### 4.1 Summarise recent activity
 
@@ -402,6 +399,7 @@ This request separates observed data from interpretation.
 ---
 
 ## Step 5: Perform Error Triage
+{: .step-sre }
 
 ### 5.1 Generate the incident data
 
@@ -488,8 +486,6 @@ Explain that:
 Do not invent customer impact, business impact, or a root cause.
 ```
 
-</div>
-
 ---
 
 ## Bonus: Use Dynatrace Intelligence in a Notebook
@@ -567,9 +563,12 @@ Each request builds on the previous answer, which is faster than writing one lon
 
 ---
 
+<div class="lab-checkpoint" markdown="1">
+
 ## Checkpoint
 
-Before proceeding to Lab 4, verify that you can:
+Work through these before moving on. If every item is true, you are ready for Lab 4.
+{: .checkpoint-intro }
 
 - Find `Dynatrace-MCP` in the Copilot tool list and run a request from Agent mode
 - Retrieve telemetry for `ai-chat-service-{YOUR_ATTENDEE_ID}`, then review the generated DQL
@@ -578,11 +577,19 @@ Before proceeding to Lab 4, verify that you can:
 - Investigate one simulated error using logs and trace context
 - Produce an evidence-based summary that distinguishes observation from conclusion
 
----
+<div class="checkpoint-actions" markdown="1">
+[Something isn't working](#troubleshooting){: .ws-btn-secondary }
+[Continue to Lab 4](lab4-automation){: .ws-btn-primary }
+</div>
+
+</div>
+
+<div class="appendix" markdown="1">
 
 ## Troubleshooting
 
-### Dynatrace MCP does not appear in Copilot
+<details markdown="1">
+<summary>Dynatrace MCP does not appear in Copilot</summary>
 
 1. Confirm `.vscode/mcp.json` exists.
 2. Validate it:
@@ -612,7 +619,10 @@ The command fails if you omit the attendee ID.
 5. Run **Developer: Reload Window**.
 6. Open a new Copilot Chat session in Agent mode.
 
-### `@dynatrace` is not recognised
+</details>
+
+<details markdown="1">
+<summary>@dynatrace is not recognised</summary>
 
 The available interaction syntax depends on the GitHub Copilot interface.
 
@@ -624,7 +634,10 @@ Use Dynatrace MCP to list the services with telemetry in the last hour.
 
 Also confirm that the Dynatrace MCP tools are enabled in the tools picker.
 
-### Authentication fails
+</details>
+
+<details markdown="1">
+<summary>Authentication fails</summary>
 
 Confirm that:
 
@@ -637,7 +650,10 @@ If the header still contains a placeholder, rerun the personalised configuration
 
 Do not paste the token into Copilot Chat or the terminal output.
 
-### No data is returned
+</details>
+
+<details markdown="1">
+<summary>No data is returned</summary>
 
 1. Confirm that `python app/main.py` is still running.
 2. Generate several new chat requests.
@@ -651,7 +667,10 @@ ai-chat-service-{YOUR_ATTENDEE_ID}
 5. Use a time range that includes the generated traffic.
 6. Ask MCP to show the DQL so you can review the filters.
 
-### Error queries return no data
+</details>
+
+<details markdown="1">
+<summary>Error queries return no data</summary>
 
 Confirm that:
 
@@ -664,13 +683,19 @@ Confirm that:
    - `error.stage`
 4. The selected time range includes the generated errors.
 
-### A specific error code returns nothing
+</details>
+
+<details markdown="1">
+<summary>A specific error code returns nothing</summary>
 
 Each simulated failure is chosen at random from eight scenarios, so your data will usually contain only some of them.
 
 Run the summary query from Step 3.2 first to see which codes you actually generated, then investigate one of those.
 
-### Copilot returns a generic answer without using Dynatrace
+</details>
+
+<details markdown="1">
+<summary>Copilot returns a generic answer without using Dynatrace</summary>
 
 Rewrite the request explicitly:
 
@@ -681,7 +706,10 @@ knowledge. Show the DQL and summarise the retrieved records.
 
 Check the tool-call information in Copilot Chat to verify that a Dynatrace MCP tool was invoked.
 
-### The generated DQL fails
+</details>
+
+<details markdown="1">
+<summary>The generated DQL fails</summary>
 
 Ask Copilot to correct the query:
 
@@ -695,7 +723,10 @@ Correct the query without changing the intended service or time range.
 
 Do not paste credentials or tokens into the chat.
 
-### The assistant claims a production root cause
+</details>
+
+<details markdown="1">
+<summary>The assistant claims a production root cause</summary>
 
 The errors in this lab are simulated. Use:
 
@@ -705,13 +736,17 @@ that the errors were intentionally simulated and do not represent a real
 provider or infrastructure failure.
 ```
 
+</details>
+
+</div>
+
 ---
 
 ## What You Have Learned
 
 <div class="persona-box developer" markdown="1">
 
-**As a developer**, you can now query Dynatrace telemetry from VS Code, follow a RAG request through its workflow, vector-search and LLM spans, examine token usage and latency, and correlate simulated errors with trace context, all without leaving the IDE. You can also combine local source code with observability evidence and ask for DQL you can review and reuse.
+You can now query Dynatrace telemetry from VS Code, follow a RAG request through its workflow, vector-search and LLM spans, examine token usage and latency, and correlate simulated errors with trace context, all without leaving the IDE. You can also combine local source code with observability evidence and ask for DQL you can review and reuse.
 
 **Your investigation workflow:** reproduce the behaviour, retrieve the evidence, inspect the relevant code, and only then propose a change.
 
@@ -719,7 +754,7 @@ provider or infrastructure failure.
 
 <div class="persona-box sre" markdown="1">
 
-**As an SRE or platform engineer**, you can scope MCP queries by service and time range, summarise token usage and model activity, identify high-latency operations, triage structured application errors, build an error timeline, and prepare both technical and stakeholder summaries without overstating what the data shows.
+You can scope MCP queries by service and time range, summarise token usage and model activity, identify high-latency operations, triage structured application errors, build an error timeline, and prepare both technical and stakeholder summaries without overstating what the data shows.
 
 **Your triage workflow:** establish the scope, retrieve the data, identify the pattern, correlate the evidence, and communicate only what the telemetry supports.
 

@@ -417,9 +417,12 @@ A simple multiplication of one workshop execution by 30 is not a reliable monthl
 
 ---
 
+<div class="lab-checkpoint" markdown="1">
+
 ## Checkpoint
 
-Before completing the lab, verify that:
+Work through these before finishing. If every item is true, the lab is complete.
+{: .checkpoint-intro }
 
 - You created `AI Usage Monitor - {YOUR_ATTENDEE_ID}` with a time interval trigger
 - `get_token_usage` executes successfully, loads the pricing lookup, and returns token totals with an estimated cost
@@ -427,11 +430,19 @@ Before completing the lab, verify that:
 - You tested both the true and false condition paths
 - You reviewed the workflow execution details and either configured a notification or confirmed why no connection was available
 
----
+<div class="checkpoint-actions" markdown="1">
+[Something isn't working](#troubleshooting){: .ws-btn-secondary }
+[View the Resources page](resources){: .ws-btn-primary }
+</div>
+
+</div>
+
+<div class="appendix" markdown="1">
 
 ## Troubleshooting
 
-### The DQL task returns no records
+<details markdown="1">
+<summary>The DQL task returns no records</summary>
 
 Check:
 
@@ -457,7 +468,10 @@ fetch spans
 | limit 20
 ```
 
-### The lookup removes every record
+</details>
+
+<details markdown="1">
+<summary>The lookup removes every record</summary>
 
 The filter:
 
@@ -486,7 +500,10 @@ The value in `gen_ai.response.model` must exist in the lookup table's `model` fi
 
 If a different value is recorded, the instructor must add that exact value to the lookup table.
 
-### The lookup table cannot be loaded
+</details>
+
+<details markdown="1">
+<summary>The lookup table cannot be loaded</summary>
 
 Confirm that:
 
@@ -495,13 +512,19 @@ Confirm that:
 3. The lookup was uploaded successfully
 4. The table is available in the same Dynatrace environment
 
-### The condition fails with `records[0]`
+</details>
+
+<details markdown="1">
+<summary>The condition fails with records[0]</summary>
 
 The DQL task returned no records.
 
 Run `get_token_usage` independently and resolve the missing-data or lookup issue before evaluating the condition.
 
-### The condition always evaluates to false
+</details>
+
+<details markdown="1">
+<summary>The condition always evaluates to false</summary>
 
 Open the output of `get_token_usage` and note the value of `total_tokens`.
 
@@ -509,13 +532,19 @@ Set the workshop threshold below that value and run the workflow again.
 
 Do not leave an artificially low threshold in a production workflow.
 
-### The notification action is unavailable
+</details>
+
+<details markdown="1">
+<summary>The notification action is unavailable</summary>
 
 The notification connection may not be installed or configured in the workshop environment.
 
 You can still complete the core exercise by running the workflow manually, inspecting the DQL task result, confirming the condition result, and reviewing which branch would have executed.
 
-### The notification task fails
+</details>
+
+<details markdown="1">
+<summary>The notification task fails</summary>
 
 Check:
 
@@ -527,7 +556,10 @@ Check:
 
 Use the workflow execution details to identify which field failed.
 
-### The notification contains an empty model value
+</details>
+
+<details markdown="1">
+<summary>The notification contains an empty model value</summary>
 
 The field name contains dots, so the expression editor may not accept dot notation. Use bracket notation instead:
 
@@ -539,17 +571,27 @@ The field name contains dots, so the expression editor may not accept dot notati
 
 {% endraw %}
 
-### The notification reports only one model
+</details>
+
+<details markdown="1">
+<summary>The notification reports only one model</summary>
 
 The query returns one row per model identifier, and `records[0]` reads only the first.
 
 If your spans record more than one identifier, either add a row for each result in the notification, or restrict the query to a single model with an additional filter.
 
-### The estimated cost appears as zero
+</details>
+
+<details markdown="1">
+<summary>The estimated cost appears as zero</summary>
 
 Nova Micro costs are very low, and the workshop produces few tokens. The value may be rounded when displayed.
 
 Inspect the raw `estimated_cost_usd` value or display more decimal places in the notification.
+
+</details>
+
+</div>
 
 ---
 
@@ -557,7 +599,7 @@ Inspect the raw `estimated_cost_usd` value or display more decimal places in the
 
 <div class="persona-box developer" markdown="1">
 
-**As a developer**, you can now automate a DQL query for your AI service, monitor input and output token usage, trigger an action only when a threshold is exceeded, identify which operations consume the most tokens, and use workflow execution details to troubleshoot the automation itself.
+You can now automate a DQL query for your AI service, monitor input and output token usage, trigger an action only when a threshold is exceeded, identify which operations consume the most tokens, and use workflow execution details to troubleshoot the automation itself.
 
 **Practical use:** schedule lightweight checks that highlight unusual growth in prompt size, model output, or request volume.
 
@@ -565,7 +607,7 @@ Inspect the raw `estimated_cost_usd` value or display more decimal places in the
 
 <div class="persona-box sre" markdown="1">
 
-**As an SRE or platform engineer**, you can enrich telemetry with centrally maintained pricing data, calculate estimated cost without hardcoding prices, configure conditional execution, connect observability analysis to a notification action, and test both the positive and negative paths before relying on a workflow.
+You can enrich telemetry with centrally maintained pricing data, calculate estimated cost without hardcoding prices, configure conditional execution, connect observability analysis to a notification action, and test both the positive and negative paths before relying on a workflow.
 
 **Practical use:** turn repeatable AI usage analysis into monitored operational processes.
 

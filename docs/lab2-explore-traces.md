@@ -22,6 +22,8 @@ By the end of this lab, you will be able to:
 - Identify opportunities to improve prompt efficiency
 - Analyse token usage over time with DQL
 
+<div class="why-dynatrace" markdown="1">
+
 ## Why Dynatrace for AI Observability?
 
 | Capability | Basic tracing | Dynatrace |
@@ -32,6 +34,10 @@ By the end of this lab, you will be able to:
 | Investigate failures | Manual investigation | End-to-end trace and log analysis |
 | Detect anomalies | Static thresholds | AI-powered baselines |
 | Take action | External tooling | Built-in Workflows |
+
+</div>
+
+---
 
 ## Step 1: Access Dynatrace
 
@@ -46,6 +52,8 @@ https://YOUR_ENV.apps.dynatrace.com
 ### 1.2 Sign in
 
 Use the credentials provided by your instructor.
+
+---
 
 ## Step 2: Find Your AI Service
 
@@ -63,9 +71,11 @@ Use the credentials provided by your instructor.
 2. Select `ai-chat-service-{YOUR_ATTENDEE_ID}`.
 3. Select **Update**.
 
-![Explorer](/assets/images/explorer.png)
+![Explorer](assets/images/service_health.png)
 
 The explorer view provides an overview of traffic, latency, errors, token usage, and other available AI observability data.
+
+---
 
 ## Step 3: Explore Prompt and Trace Data
 
@@ -80,9 +90,10 @@ This view provides more detailed information about requests made by your AI serv
 
 ### 3.2 Open distributed traces
 
-Select **View prompt details** --> **View trace** in the upper-right corner.
+Select **View prompt details --> View trace** in the upper-right corner.
 
 ![View prompt details](assets/images/view-prompt.png)
+
 ![View traces](assets/images/view-trace.png)
 
 The Distributed Tracing app opens and displays spans associated with the selected service.
@@ -95,11 +106,15 @@ Open a trace associated with the `/chat` endpoint.
 
 ![Trace detail](assets/images/trace_dive.png)
 
+---
+
 ## Your Mission
 
-The next exercises examine the application from two perspectives.
+The next exercises examine the application from two perspectives. Both paths use the same telemetry, but they ask different questions of it.
 
-### Developer: Why is the RAG application producing an unexpected answer?
+<div class="persona-box developer" markdown="1">
+
+### Why is the RAG application producing an unexpected answer?
 
 You need to determine:
 
@@ -112,7 +127,11 @@ You need to determine:
 
 **Focus on:** Steps 4, 5, and 6.
 
-### SRE or Platform Engineer: How is this AI service consuming resources?
+</div>
+
+<div class="persona-box sre" markdown="1">
+
+### How is this AI service consuming resources?
 
 You need to understand:
 
@@ -124,7 +143,12 @@ You need to understand:
 
 **Focus on:** Steps 7, 8, and 9.
 
+</div>
+
+---
+
 ## Step 4: Analyse an AI Trace
+{: .step-dev }
 
 ### 4.1 Understand the trace structure
 
@@ -193,7 +217,10 @@ Compare the short intent-classification call with the final response-generation 
 
 > Prompt and completion capture can expose application or user data. Production environments should apply suitable access controls and data-handling policies.
 
+---
+
 ## Step 5: Understand Local Retrieval
+{: .step-dev }
 
 The application converts each question into a vector inside the Codespace, using a deterministic hashing function rather than a trained embedding model. Nothing is sent to LiteLLM or Amazon Bedrock for this step.
 
@@ -210,7 +237,10 @@ Because vectorisation happens in-process, you should not expect a remote `openai
 
 > In a production RAG system this step would normally call a trained embedding model, and that call would appear as its own span with its own token usage and latency. The workshop uses a local function so that every attendee gets identical, repeatable retrieval without an extra dependency.
 
+---
+
 ## Step 6: Analyse Vector Search
+{: .step-dev }
 
 ### 6.1 Find the vector-store span
 
@@ -236,7 +266,10 @@ Consider:
 - Do the returned sources appear relevant to the original question?
 - Would changing the number of retrieved chunks improve the response or only increase the prompt size?
 
+---
+
 ## Step 7: Analyse Token Utilisation
+{: .step-sre }
 
 Amazon Nova Micro supports the following limits in this workshop configuration:
 
@@ -299,7 +332,10 @@ This query:
 
 > **Tip:** Low utilisation is expected in this workshop. The objective is to learn how lookup data can make capacity analysis dynamic instead of hardcoding model limits into every query.
 
+---
+
 ## Step 8: Use Notebooks for AI Analysis
+{: .step-sre }
 
 ### 8.1 Model usage distribution
 
@@ -328,7 +364,10 @@ Try changing the visualisation to **Categorical**. Look for the operations with 
 
 > Not every span represents an LLM request. The result can include HTTP, workflow, task, vector-store, and LLM spans.
 
+---
+
 ## Step 9: Analyse Token Economics
+{: .step-sre }
 
 ### 9.1 Inspect the pricing lookup table
 
@@ -440,9 +479,14 @@ Look for periods where token usage increases more quickly than the number of req
 | Tokens increase faster than requests | Average request size is increasing | Compare prompts and retrieval results |
 | Slow requests with normal token usage | Delay may be outside model generation | Examine workflow and vector-search spans |
 
+---
+
+<div class="lab-checkpoint" markdown="1">
+
 ## Checkpoint
 
-Before proceeding to Lab 3, verify that you can:
+Work through these before moving on. If every item is true, you are ready for Lab 3.
+{: .checkpoint-intro }
 
 - Open a trace for the `/chat` endpoint and identify the workflow, task, vector-store and LLM spans
 - Find both LLM calls in a RAG request and inspect their prompts, completions and token attributes
@@ -450,9 +494,19 @@ Before proceeding to Lab 3, verify that you can:
 - Load both lookup tables and calculate token utilisation and estimated cost
 - Analyse token usage over time
 
+<div class="checkpoint-actions" markdown="1">
+[Something isn't working](#troubleshooting){: .ws-btn-secondary }
+[Continue to Lab 3](lab3-dynatrace-mcp){: .ws-btn-primary }
+</div>
+
+</div>
+
+<div class="appendix" markdown="1">
+
 ## Troubleshooting
 
-### No traces found
+<details markdown="1">
+<summary>No traces found</summary>
 
 1. Confirm that the service name contains the correct `ATTENDEE_ID`.
 2. Send several new requests through the chat interface.
@@ -461,14 +515,20 @@ Before proceeding to Lab 3, verify that you can:
 5. Confirm that `DT_API_TOKEN` has the required trace-ingest permission.
 6. Expand the selected time range in Dynatrace.
 
-### LLM attributes are missing
+</details>
+
+<details markdown="1">
+<summary>LLM attributes are missing</summary>
 
 1. Confirm that the Traceloop SDK is installed.
 2. Confirm that `Traceloop.init()` runs when the application starts.
 3. Look at the LLM child span rather than only the parent HTTP or workflow span.
 4. Check all available span attributes, because names can vary between instrumentation versions.
 
-### The lookup query returns no rows
+</details>
+
+<details markdown="1">
+<summary>The lookup query returns no rows</summary>
 
 A lookup that finds no match does not produce an error. The `filter isNotNull(...)` line removes the unmatched rows, so the result is simply empty.
 
@@ -489,11 +549,17 @@ load "/lookups/ai/bedrock/model-costs"
 
 Confirm that the value in `gen_ai.response.model` exists in the lookup table's `model` field, and that your account can read Grail lookup files.
 
-### Token values are null
+</details>
+
+<details markdown="1">
+<summary>Token values are null</summary>
 
 Make sure you selected LLM spans. Workflow, task, HTTP and ChromaDB spans do not necessarily contain `gen_ai.usage.*` attributes.
 
-### The service does not appear
+</details>
+
+<details markdown="1">
+<summary>The service does not appear</summary>
 
 1. Send more chat requests.
 2. Refresh the AI Observability app.
@@ -501,11 +567,31 @@ Make sure you selected LLM spans. Workflow, task, HTTP and ChromaDB spans do not
 4. Search for the complete service name.
 5. Use Distributed Tracing directly if the service is not yet visible in the AI Observability app.
 
+</details>
+
+</div>
+
+---
+
 ## What You Have Learned
 
-**As a developer**, you can follow a RAG request through its complete trace, distinguish workflow, task, vector-store and LLM spans, and inspect prompts, completions, token usage and latency at each stage. When a RAG response is poor, inspect the retrieved documents, the generated context, the final prompt and the completion before changing the model.
+<div class="persona-box developer" markdown="1">
 
-**As an SRE or platform engineer**, you can analyse model usage with DQL, compare token consumption against model limits, estimate cost from aggregated token data, and track usage over time. Model limits and pricing belong in centrally maintained lookup data, not hardcoded separately into every query.
+You can follow a RAG request through its complete trace, distinguish workflow, task, vector-store and LLM spans, and inspect prompts, completions, token usage and latency at each stage.
+
+**When a RAG response is poor:** inspect the retrieved documents, the generated context, the final prompt and the completion before changing the model.
+
+</div>
+
+<div class="persona-box sre" markdown="1">
+
+You can analyse model usage with DQL, compare token consumption against model limits, estimate cost from aggregated token data, and track usage over time.
+
+**Take back to your team:** model limits and pricing belong in centrally maintained lookup data, not hardcoded separately into every query.
+
+</div>
+
+---
 
 ## Great Progress
 
@@ -513,4 +599,7 @@ You have explored an instrumented RAG pipeline and analysed its structure, laten
 
 In the next lab, you will use Dynatrace MCP to investigate observability data directly from your development environment.
 
-[← Lab 1: Instrumentation](lab1-instrumentation) | [Lab 3: Dynatrace MCP →](lab3-dynatrace-mcp)
+<div class="lab-nav">
+  <a href="lab1-instrumentation">← Lab 1: Instrumentation</a>
+  <a href="lab3-dynatrace-mcp">Lab 3: Dynatrace MCP →</a>
+</div>
