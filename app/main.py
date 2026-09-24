@@ -237,46 +237,94 @@ class HealthResponse(BaseModel):
 
 SAMPLE_DOCUMENTS = [
     """
-    Dynatrace is an AI-powered, full-stack observability platform that provides 
-    automatic and intelligent monitoring for cloud-native and enterprise environments. 
-    It uses Davis AI to automatically detect anomalies, identify root causes, and 
-    provide precise answers about application performance issues.
+    Dynatrace is an AI-powered, full-stack observability platform that provides
+    automatic and intelligent monitoring for cloud-native and enterprise
+    environments. It uses Dynatrace Intelligence to automatically detect anomalies, identify
+    root causes, and provide precise answers about application performance
+    issues.
     """,
     """
-    Dynatrace OneAgent is a single agent that automatically discovers and monitors 
-    all processes, services, and infrastructure in your environment. It requires 
-    no manual configuration and provides full-stack visibility from the application 
-    layer down to the infrastructure.
+    Dynatrace OneAgent is a single agent that automatically discovers and
+    monitors all processes, services, and infrastructure in your environment.
+    It requires no manual configuration and provides full-stack visibility from
+    the application layer down to the infrastructure.
     """,
     """
-    OpenTelemetry is an open-source observability framework that provides APIs, 
-    libraries, and tools for collecting telemetry data. Dynatrace fully supports 
-    OpenTelemetry and can ingest traces, metrics, and logs via the OTLP protocol.
+    OpenTelemetry is an open-source observability framework that provides APIs,
+    libraries, and tools for collecting telemetry data. Dynatrace fully supports
+    OpenTelemetry and can ingest traces, metrics, and logs via the OTLP
+    protocol.
     """,
     """
-    Grail is Dynatrace's next-generation data lakehouse that provides unified 
-    storage and analysis of all observability data. It enables powerful analytics, 
-    custom dashboards, and AI-powered insights across logs, traces, metrics, 
-    and business events.
+    Grail is the Dynatrace data lakehouse. It stores logs, traces, metrics,
+    events and business events together in one place, with no indexes and no
+    schema defined up front, so data keeps its full context and can be queried
+    as it was ingested. Grail is the storage layer that DQL queries read from,
+    and it also holds lookup tables that queries can join against.
     """,
     """
-    Dynatrace Application Security provides runtime vulnerability detection and 
-    protection. It automatically identifies vulnerabilities in your running 
+    DQL, the Dynatrace Query Language, is how you query data held in Grail.
+    A DQL query names a data source and then passes records through a pipeline
+    of commands joined by the pipe character. DQL is not SQL. There is no
+    SELECT, no FROM, no WHERE and no GROUP BY, and no semicolon at the end.
+    The order in which you write the commands is the order they run in.
+    """,
+    """
+    A typical DQL query looks like this:
+
+    fetch logs
+    | filter loglevel == "ERROR"
+    | summarize error_count = count(), by:{host.name}
+    | sort error_count desc
+    | limit 10
+
+    It reads top to bottom: fetch the logs, keep the error records, count them
+    per host, sort by that count, return the first ten rows.
+    """,
+    """
+    Common DQL commands are fetch to choose a data source such as logs, spans,
+    events or metrics; filter to keep matching records; fields and fieldsAdd to
+    select or calculate columns; summarize to aggregate with functions like
+    count, sum, avg and max; sort and limit to order and trim the result;
+    lookup to enrich records from a lookup table; and makeTimeseries to turn
+    records into a time series for charting.
+    """,
+    """
+    In DQL, comparison uses a double equals sign and string values are written
+    in double quotes, for example filter service.name == "checkout". Aggregates
+    in summarize are given a name, as in total_tokens = sum(gen_ai.usage
+    .input_tokens). Grouping is written as by:{field}, not GROUP BY. Field
+    names that contain dots are written as-is and do not need quoting.
+    """,
+    """
+    Dynatrace Application Security provides runtime vulnerability detection and
+    protection. It automatically identifies vulnerabilities in your running
     applications without requiring code changes or additional agents.
     """,
     """
-    OpenLLMetry is an open-source project built on OpenTelemetry for monitoring 
-    LLM applications. It provides automatic instrumentation for popular AI/ML 
-    frameworks like OpenAI, LangChain, and more, enabling observability into 
-    AI workloads.
+    OpenLLMetry is an open-source project built on OpenTelemetry for monitoring
+    LLM applications. It provides automatic instrumentation for popular AI
+    frameworks such as OpenAI, LangChain and vector stores, capturing prompts,
+    completions, token usage and latency as spans, which makes AI workloads
+    observable in the same way as any other service.
     """,
     """
-    The Dynatrace MCP (Model Context Protocol) server enables AI assistants to 
-    interact with Dynatrace environments. It allows querying Dynatrace data, 
-    analyzing problems, and getting insights directly from your IDE using 
-    tools like GitHub Copilot.
+    In AI observability, token usage is recorded on LLM spans using the
+    OpenTelemetry GenAI semantic conventions. The attributes
+    gen_ai.usage.input_tokens and gen_ai.usage.output_tokens hold the token
+    counts, and gen_ai.response.model records which model answered. Because
+    models are billed per million tokens, those attributes are what cost and
+    capacity analysis is built on.
+    """,
     """
+    The Dynatrace MCP server implements the Model Context Protocol, which lets
+    an AI assistant work with external tools and data. It allows assistants
+    such as GitHub Copilot to query Dynatrace data, generate DQL, investigate
+    problems and analyse telemetry directly from the IDE, limited by the
+    permissions on the platform token it was given.
+    """,
 ]
+
 
 class LocalHashingEmbeddings(Embeddings):
     """

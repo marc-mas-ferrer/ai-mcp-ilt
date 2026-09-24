@@ -63,9 +63,9 @@ Use the credentials provided by your instructor.
 2. Select `ai-chat-service-{YOUR_ATTENDEE_ID}`.
 3. Select **Update**.
 
-![Service health view](docs/assets/images/explorer.png)
+![Explorer](/assets/images/explorer.png)
 
-The service health view provides an overview of traffic, latency, errors, token usage, and other available AI observability data.
+The explorer view provides an overview of traffic, latency, errors, token usage, and other available AI observability data.
 
 ## Step 3: Explore Prompt and Trace Data
 

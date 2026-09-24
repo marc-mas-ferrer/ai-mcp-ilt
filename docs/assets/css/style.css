@@ -804,3 +804,499 @@ blockquote strong {
         padding: 0;
     }
 }
+/* ==========================================================================
+   Dynatrace AI + MCP Workshop — UI additions
+   Append to the END of docs/assets/css/style.css
+   Everything is scoped to its own class names, so nothing here overrides
+   your existing theme rules except the screenshot sizing block.
+   ========================================================================== */
+
+:root {
+  /* Neutrals */
+  --ws-fg:            #1e293b;
+  --ws-fg-muted:      #64748b;
+  --ws-border:        #e2e8f0;
+  --ws-surface:       #f8fafc;
+
+  /* Developer path — violet */
+  --ws-dev-accent:    #7c3aed;
+  --ws-dev-bg:        #f7f5ff;
+  --ws-dev-bg-end:    #fdfcff;
+  --ws-dev-heading:   #5b21b6;
+  --ws-dev-chip-bg:   #ede9fe;
+
+  /* SRE path — emerald */
+  --ws-sre-accent:    #059669;
+  --ws-sre-bg:        #f0fdf7;
+  --ws-sre-bg-end:    #fbfffd;
+  --ws-sre-heading:   #065f46;
+  --ws-sre-chip-bg:   #d1fae5;
+
+  /* Checkpoint — blue */
+  --ws-check-accent:  #2563eb;
+  --ws-check-bg:      #f5f9ff;
+  --ws-check-heading: #1e40af;
+
+  /* Comparison panel — amber */
+  --ws-why-accent:    #d97706;
+  --ws-why-bg:        #fffbf3;
+
+  --ws-radius:        10px;
+  --ws-radius-sm:     6px;
+  --ws-shadow:        0 1px 2px rgba(15, 23, 42, .04),
+                      0 4px 12px rgba(15, 23, 42, .05);
+}
+
+/* --------------------------------------------------------------------------
+   1. Screenshots
+   Caps oversized images and frames them. Scoped to content areas so it
+   never touches nav logos or inline badges.
+   -------------------------------------------------------------------------- */
+
+.main-content img,
+.page-content img,
+article img,
+.post-content img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  max-height: 460px;
+  margin: 24px 0;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  box-shadow: var(--ws-shadow);
+  background: #fff;
+}
+
+/* Opt-outs: <img class="ws-img-full"> or <img class="ws-img-inline"> */
+.main-content img.ws-img-full,
+.page-content img.ws-img-full,
+article img.ws-img-full {
+  max-height: none;
+  width: 100%;
+}
+
+.main-content img.ws-img-inline,
+.page-content img.ws-img-inline,
+article img.ws-img-inline {
+  display: inline;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  max-height: 1.2em;
+  vertical-align: middle;
+}
+
+/* Optional caption: place _italic text_ directly under an image */
+.main-content img + em,
+.page-content img + em,
+article img + em {
+  display: block;
+  margin: -12px 0 24px;
+  font-size: .85rem;
+  font-style: normal;
+  color: var(--ws-fg-muted);
+}
+
+/* --------------------------------------------------------------------------
+   2. Persona paths
+   <div class="persona-box developer" markdown="1"> … </div>
+   <div class="persona-box sre" markdown="1"> … </div>
+   -------------------------------------------------------------------------- */
+
+.persona-box {
+  position: relative;
+  margin: 28px 0;
+  padding: 22px 26px 20px;
+  border: 1px solid var(--ws-border);
+  border-left: 4px solid var(--ws-fg-muted);
+  border-radius: var(--ws-radius-sm) var(--ws-radius) var(--ws-radius) var(--ws-radius-sm);
+  box-shadow: var(--ws-shadow);
+}
+
+/* Small uppercase label above the heading, in place of an emoji */
+.persona-box::before {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.persona-box > :first-of-type { margin-top: 0; }
+.persona-box > :last-child    { margin-bottom: 0; }
+
+.persona-box h2,
+.persona-box h3,
+.persona-box h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  border-bottom: 0;
+  font-size: 1.12rem;
+  line-height: 1.4;
+}
+
+.persona-box p,
+.persona-box li { font-size: .95rem; }
+.persona-box ul { margin-bottom: 14px; }
+
+/* Developer */
+.persona-box.developer {
+  border-left-color: var(--ws-dev-accent);
+  background: linear-gradient(135deg, var(--ws-dev-bg) 0%, var(--ws-dev-bg-end) 100%);
+}
+.persona-box.developer::before {
+  content: "Developer path";
+  background: var(--ws-dev-chip-bg);
+  color: var(--ws-dev-heading);
+}
+.persona-box.developer h2,
+.persona-box.developer h3,
+.persona-box.developer h4 { color: var(--ws-dev-heading); }
+.persona-box.developer li::marker { color: var(--ws-dev-accent); }
+
+/* SRE / Platform */
+.persona-box.sre {
+  border-left-color: var(--ws-sre-accent);
+  background: linear-gradient(135deg, var(--ws-sre-bg) 0%, var(--ws-sre-bg-end) 100%);
+}
+.persona-box.sre::before {
+  content: "SRE / Platform path";
+  background: var(--ws-sre-chip-bg);
+  color: var(--ws-sre-heading);
+}
+.persona-box.sre h2,
+.persona-box.sre h3,
+.persona-box.sre h4 { color: var(--ws-sre-heading); }
+.persona-box.sre li::marker { color: var(--ws-sre-accent); }
+
+/* Step headings that belong to a path.
+   <h2 class="step-dev">Step 2: …</h2>  /  <h2 class="step-sre">…</h2>
+   In markdown:  ## Step 2: Investigate the RAG Pipeline
+                 {: .step-dev } */
+.step-dev,
+.step-sre {
+  padding-left: 14px;
+  border-left: 4px solid;
+  border-radius: 2px;
+}
+.step-dev { border-left-color: var(--ws-dev-accent); }
+.step-sre { border-left-color: var(--ws-sre-accent); }
+
+.step-dev::after,
+.step-sre::after {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.step-dev::after {
+  content: "Developer";
+  background: var(--ws-dev-chip-bg);
+  color: var(--ws-dev-heading);
+}
+.step-sre::after {
+  content: "SRE";
+  background: var(--ws-sre-chip-bg);
+  color: var(--ws-sre-heading);
+}
+
+/* --------------------------------------------------------------------------
+   3. Comparison panel  ("Why Dynatrace", "From Analysis to Automation")
+   <div class="why-dynatrace" markdown="1"> … </div>
+   -------------------------------------------------------------------------- */
+
+.why-dynatrace {
+  margin: 28px 0;
+  padding: 20px 24px;
+  border: 1px solid var(--ws-border);
+  border-left: 4px solid var(--ws-why-accent);
+  border-radius: var(--ws-radius-sm) var(--ws-radius) var(--ws-radius) var(--ws-radius-sm);
+  background: var(--ws-why-bg);
+}
+.why-dynatrace > :first-child { margin-top: 0; }
+.why-dynatrace > :last-child  { margin-bottom: 0; }
+.why-dynatrace h2,
+.why-dynatrace h3 {
+  margin-top: 0;
+  border-bottom: 0;
+  font-size: 1.12rem;
+}
+.why-dynatrace table { margin: 14px 0; background: #fff; }
+
+/* --------------------------------------------------------------------------
+   4. Checkpoint card
+   Placed immediately BEFORE the troubleshooting appendix, so attendees who
+   pass can jump straight to the next lab without scrolling through it.
+   -------------------------------------------------------------------------- */
+
+.lab-checkpoint {
+  margin: 40px 0 28px;
+  padding: 24px 28px 22px;
+  border: 1px solid #dbeafe;
+  border-top: 4px solid var(--ws-check-accent);
+  border-radius: var(--ws-radius);
+  background: var(--ws-check-bg);
+  box-shadow: var(--ws-shadow);
+}
+
+.lab-checkpoint > :first-child { margin-top: 0; }
+
+.lab-checkpoint h2 {
+  margin-top: 0;
+  margin-bottom: 6px;
+  border-bottom: 0;
+  font-size: 1.2rem;
+  color: var(--ws-check-heading);
+}
+
+.lab-checkpoint .checkpoint-intro {
+  margin-bottom: 16px;
+  font-size: .92rem;
+  color: var(--ws-fg-muted);
+}
+
+/* Checklist — square markers that read as checkboxes */
+.lab-checkpoint ul {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.lab-checkpoint ul li {
+  position: relative;
+  margin: 0 0 9px;
+  padding-left: 30px;
+  font-size: .95rem;
+  line-height: 1.55;
+}
+.lab-checkpoint ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .28em;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #93b4f5;
+  border-radius: 4px;
+  background: #fff;
+}
+
+/* Button row */
+.checkpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #dbeafe;
+}
+
+.checkpoint-actions a,
+a.ws-btn-primary,
+a.ws-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  border-radius: var(--ws-radius-sm);
+  font-size: .92rem;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: background-color .15s ease, border-color .15s ease,
+              transform .15s ease, box-shadow .15s ease;
+}
+
+a.ws-btn-primary {
+  background: var(--ws-check-accent);
+  border: 1px solid var(--ws-check-accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, .25);
+}
+a.ws-btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, .28);
+}
+
+a.ws-btn-secondary {
+  background: #fff;
+  border: 1px solid #c7d7f5;
+  color: var(--ws-check-heading);
+}
+a.ws-btn-secondary:hover {
+  background: #eef4ff;
+  border-color: #93b4f5;
+  color: var(--ws-check-heading);
+  transform: translateY(-1px);
+}
+
+a.ws-btn-primary:focus-visible,
+a.ws-btn-secondary:focus-visible {
+  outline: 2px solid var(--ws-check-accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   5. Troubleshooting appendix
+   <div class="appendix" markdown="1"> … </div>
+   Visually demoted: muted surface, smaller type, clear "reference" framing.
+   -------------------------------------------------------------------------- */
+
+.appendix {
+  margin: 44px 0 28px;
+  padding: 26px 28px 22px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  background: var(--ws-surface);
+}
+
+.appendix::before {
+  content: "Appendix — reference only";
+  display: block;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ws-border);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ws-fg-muted);
+}
+
+.appendix > h2:first-of-type { margin-top: 0; }
+
+.appendix h2 {
+  border-bottom: 0;
+  font-size: 1.15rem;
+  color: var(--ws-fg);
+}
+
+.appendix h3 {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-size: .98rem;
+  font-weight: 650;
+  color: var(--ws-fg);
+}
+
+.appendix h3 + p,
+.appendix h3 + ul,
+.appendix h3 + ol { margin-top: 6px; }
+
+.appendix p,
+.appendix li { font-size: .92rem; }
+
+.appendix pre {
+  font-size: .85rem;
+  background: #fff;
+  border: 1px solid var(--ws-border);
+}
+
+.appendix > :last-child { margin-bottom: 0; }
+
+/* Collapsible variant — wrap entries in <details> if a page has many */
+.appendix details {
+  margin: 10px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-sm);
+  background: #fff;
+}
+.appendix details[open] { padding-bottom: 8px; }
+.appendix summary {
+  cursor: pointer;
+  font-size: .94rem;
+  font-weight: 600;
+  color: var(--ws-fg);
+}
+.appendix summary:hover { color: var(--ws-check-accent); }
+
+/* --------------------------------------------------------------------------
+   6. Lab navigation footer
+   -------------------------------------------------------------------------- */
+
+.lab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid var(--ws-border);
+}
+
+.lab-nav a {
+  padding: 9px 16px;
+  border: 1px solid var(--ws-border);
+  border-radius: var(--ws-radius-sm);
+  font-size: .92rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--ws-fg);
+  background: #fff;
+  transition: border-color .15s ease, background-color .15s ease,
+              transform .15s ease;
+}
+.lab-nav a:hover {
+  border-color: var(--ws-check-accent);
+  background: var(--ws-check-bg);
+  color: var(--ws-check-heading);
+  transform: translateY(-1px);
+}
+.lab-nav a:last-child:first-child { margin-left: auto; }
+
+/* --------------------------------------------------------------------------
+   7. Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .persona-box,
+  .why-dynatrace   { padding: 18px 18px 16px; }
+  .lab-checkpoint,
+  .appendix        { padding: 20px 18px; }
+
+  .main-content img,
+  .page-content img,
+  article img      { max-height: 300px; }
+
+  .checkpoint-actions { flex-direction: column; align-items: stretch; }
+  .checkpoint-actions a { justify-content: center; }
+
+  .lab-nav { flex-direction: column; }
+  .lab-nav a { text-align: center; }
+
+  .step-dev::after,
+  .step-sre::after { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   8. Print — drop decoration, keep content
+   -------------------------------------------------------------------------- */
+
+@media print {
+  .persona-box,
+  .why-dynatrace,
+  .lab-checkpoint,
+  .appendix {
+    background: none;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  .checkpoint-actions,
+  .lab-nav { display: none; }
+}
