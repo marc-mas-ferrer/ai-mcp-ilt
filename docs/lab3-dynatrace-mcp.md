@@ -153,8 +153,9 @@ Your goal is to determine:
 
 ---
 
+<div class="persona-section developer" markdown="1">
+
 ## Step 2: Investigate the RAG Pipeline
-{: .step-dev }
 
 ### 2.1 Find recent requests
 
@@ -240,10 +241,11 @@ State clearly if the available telemetry is insufficient for the comparison.
 
 This investigation should show that a RAG request contains more processing stages than a direct LLM request.
 
----
+</div>
+
+<div class="persona-section developer" markdown="1">
 
 ## Step 3: Investigate Simulated Errors
-{: .step-dev }
 
 ### 3.1 Generate errors
 
@@ -339,10 +341,13 @@ Copilot can combine the local source code with evidence retrieved through Dynatr
 
 > Always review generated code before applying it. Telemetry can identify behaviour, but a suggested code change still requires engineering judgement.
 
+</div>
+
 ---
 
+<div class="persona-section sre" markdown="1">
+
 ## Step 4: Assess Service Usage
-{: .step-sre }
 
 ### 4.1 Summarise recent activity
 
@@ -396,10 +401,11 @@ the telemetry.
 
 This request separates observed data from interpretation.
 
----
+</div>
+
+<div class="persona-section sre" markdown="1">
 
 ## Step 5: Perform Error Triage
-{: .step-sre }
 
 ### 5.1 Generate the incident data
 
@@ -486,6 +492,8 @@ Explain that:
 Do not invent customer impact, business impact, or a root cause.
 ```
 
+</div>
+
 ---
 
 ## Bonus: Use Dynatrace Intelligence in a Notebook
@@ -567,7 +575,7 @@ Each request builds on the previous answer, which is faster than writing one lon
 
 ## Checkpoint
 
-Work through these before moving on. If every item is true, you are ready for Lab 4.
+Tick each item as you confirm it. If every box is checked, you are ready for Lab 4.
 {: .checkpoint-intro }
 
 - Find `Dynatrace-MCP` in the Copilot tool list and run a request from Agent mode

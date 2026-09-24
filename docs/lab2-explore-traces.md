@@ -92,9 +92,9 @@ This view provides more detailed information about requests made by your AI serv
 
 Select **View prompt details --> View trace** in the upper-right corner.
 
-![View prompt details](assets/images/view-prompt.png)
+![View prompt details](assets/images/view_prompt_details.png)
 
-![View traces](assets/images/view-trace.png)
+![View traces](assets/images/view_traces.png)
 
 The Distributed Tracing app opens and displays spans associated with the selected service.
 
@@ -147,8 +147,9 @@ You need to understand:
 
 ---
 
+<div class="persona-section developer" markdown="1">
+
 ## Step 4: Analyse an AI Trace
-{: .step-dev }
 
 ### 4.1 Understand the trace structure
 
@@ -217,10 +218,11 @@ Compare the short intent-classification call with the final response-generation 
 
 > Prompt and completion capture can expose application or user data. Production environments should apply suitable access controls and data-handling policies.
 
----
+</div>
+
+<div class="persona-section developer" markdown="1">
 
 ## Step 5: Understand Local Retrieval
-{: .step-dev }
 
 The application converts each question into a vector inside the Codespace, using a deterministic hashing function rather than a trained embedding model. Nothing is sent to LiteLLM or Amazon Bedrock for this step.
 
@@ -237,10 +239,11 @@ Because vectorisation happens in-process, you should not expect a remote `openai
 
 > In a production RAG system this step would normally call a trained embedding model, and that call would appear as its own span with its own token usage and latency. The workshop uses a local function so that every attendee gets identical, repeatable retrieval without an extra dependency.
 
----
+</div>
+
+<div class="persona-section developer" markdown="1">
 
 ## Step 6: Analyse Vector Search
-{: .step-dev }
 
 ### 6.1 Find the vector-store span
 
@@ -266,10 +269,13 @@ Consider:
 - Do the returned sources appear relevant to the original question?
 - Would changing the number of retrieved chunks improve the response or only increase the prompt size?
 
+</div>
+
 ---
 
+<div class="persona-section sre" markdown="1">
+
 ## Step 7: Analyse Token Utilisation
-{: .step-sre }
 
 Amazon Nova Micro supports the following limits in this workshop configuration:
 
@@ -332,10 +338,11 @@ This query:
 
 > **Tip:** Low utilisation is expected in this workshop. The objective is to learn how lookup data can make capacity analysis dynamic instead of hardcoding model limits into every query.
 
----
+</div>
+
+<div class="persona-section sre" markdown="1">
 
 ## Step 8: Use Notebooks for AI Analysis
-{: .step-sre }
 
 ### 8.1 Model usage distribution
 
@@ -364,10 +371,11 @@ Try changing the visualisation to **Categorical**. Look for the operations with 
 
 > Not every span represents an LLM request. The result can include HTTP, workflow, task, vector-store, and LLM spans.
 
----
+</div>
+
+<div class="persona-section sre" markdown="1">
 
 ## Step 9: Analyse Token Economics
-{: .step-sre }
 
 ### 9.1 Inspect the pricing lookup table
 
@@ -479,13 +487,15 @@ Look for periods where token usage increases more quickly than the number of req
 | Tokens increase faster than requests | Average request size is increasing | Compare prompts and retrieval results |
 | Slow requests with normal token usage | Delay may be outside model generation | Examine workflow and vector-search spans |
 
+</div>
+
 ---
 
 <div class="lab-checkpoint" markdown="1">
 
 ## Checkpoint
 
-Work through these before moving on. If every item is true, you are ready for Lab 3.
+Tick each item as you confirm it. If every box is checked, you are ready for Lab 3.
 {: .checkpoint-intro }
 
 - Open a trace for the `/chat` endpoint and identify the workflow, task, vector-store and LLM spans

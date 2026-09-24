@@ -805,81 +805,54 @@ blockquote strong {
     }
 }
 /* ==========================================================================
-   Dynatrace AI + MCP Workshop — UI additions
+   Dynatrace AI + MCP Workshop — UI additions  (v2)
    Append to the END of docs/assets/css/style.css
-   Everything is scoped to its own class names, so nothing here overrides
-   your existing theme rules except the screenshot sizing block.
+
+   Replaces the earlier v2 block if you already added one — delete the old
+   "Workshop UI additions" section first, then paste this.
+
+   Uses the variables already defined at the top of style.css
+   (--dt-purple, --dt-green, --radius-lg, --shadow-md, …) so everything
+   stays on-brand.
    ========================================================================== */
 
 :root {
-  /* Neutrals */
-  --ws-fg:            #1e293b;
-  --ws-fg-muted:      #64748b;
-  --ws-border:        #e2e8f0;
-  --ws-surface:       #f8fafc;
+  /* Developer path — Dynatrace purple */
+  --path-dev:          var(--dt-purple);
+  --path-dev-dark:     var(--dt-purple-dark);
+  --path-dev-tint:     #F6F2FE;
+  --path-dev-chip:     #E4D9FA;
 
-  /* Developer path — violet */
-  --ws-dev-accent:    #7c3aed;
-  --ws-dev-bg:        #f7f5ff;
-  --ws-dev-bg-end:    #fdfcff;
-  --ws-dev-heading:   #5b21b6;
-  --ws-dev-chip-bg:   #ede9fe;
-
-  /* SRE path — emerald */
-  --ws-sre-accent:    #059669;
-  --ws-sre-bg:        #f0fdf7;
-  --ws-sre-bg-end:    #fbfffd;
-  --ws-sre-heading:   #065f46;
-  --ws-sre-chip-bg:   #d1fae5;
-
-  /* Checkpoint — blue */
-  --ws-check-accent:  #2563eb;
-  --ws-check-bg:      #f5f9ff;
-  --ws-check-heading: #1e40af;
-
-  /* Comparison panel — amber */
-  --ws-why-accent:    #d97706;
-  --ws-why-bg:        #fffbf3;
-
-  --ws-radius:        10px;
-  --ws-radius-sm:     6px;
-  --ws-shadow:        0 1px 2px rgba(15, 23, 42, .04),
-                      0 4px 12px rgba(15, 23, 42, .05);
+  /* SRE / Platform path — Dynatrace green */
+  --path-sre:          #1F9A5F;
+  --path-sre-dark:     #157A4A;
+  --path-sre-tint:     #EFFAF4;
+  --path-sre-chip:     #CFEEDF;
 }
 
 /* --------------------------------------------------------------------------
-   1. Screenshots
-   Caps oversized images and frames them. Scoped to content areas so it
-   never touches nav logos or inline badges.
+   1. Screenshots — cap the oversized ones and frame them
    -------------------------------------------------------------------------- */
 
-.main-content img,
-.page-content img,
-article img,
-.post-content img {
+.content img {
   display: block;
   max-width: 100%;
   width: auto;
   height: auto;
-  max-height: 460px;
+  max-height: 440px;
   margin: 24px 0;
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius);
-  box-shadow: var(--ws-shadow);
-  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: white;
 }
 
-/* Opt-outs: <img class="ws-img-full"> or <img class="ws-img-inline"> */
-.main-content img.ws-img-full,
-.page-content img.ws-img-full,
-article img.ws-img-full {
+.content img.ws-img-full {
   max-height: none;
   width: 100%;
 }
 
-.main-content img.ws-img-inline,
-.page-content img.ws-img-inline,
-article img.ws-img-inline {
+.content img.ws-img-inline {
   display: inline;
   margin: 0;
   border: 0;
@@ -888,43 +861,50 @@ article img.ws-img-inline {
   vertical-align: middle;
 }
 
-/* Optional caption: place _italic text_ directly under an image */
-.main-content img + em,
-.page-content img + em,
-article img + em {
+/* Optional caption: italic line directly under an image */
+.content img + em {
   display: block;
-  margin: -12px 0 24px;
-  font-size: .85rem;
+  margin: -14px 0 24px;
+  font-size: 0.85rem;
   font-style: normal;
-  color: var(--ws-fg-muted);
+  color: var(--gray-500);
 }
 
 /* --------------------------------------------------------------------------
    2. Persona paths
-   <div class="persona-box developer" markdown="1"> … </div>
-   <div class="persona-box sre" markdown="1"> … </div>
+   Two components:
+     .persona-box      — the short "choose your path" cards
+     .persona-section  — wraps an ENTIRE step so the whole block is tinted
    -------------------------------------------------------------------------- */
 
-.persona-box {
+.persona-box,
+.persona-section {
   position: relative;
-  margin: 28px 0;
-  padding: 22px 26px 20px;
-  border: 1px solid var(--ws-border);
-  border-left: 4px solid var(--ws-fg-muted);
-  border-radius: var(--ws-radius-sm) var(--ws-radius) var(--ws-radius) var(--ws-radius-sm);
-  box-shadow: var(--ws-shadow);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  border-left-width: 5px;
+  border-left-style: solid;
 }
 
-/* Small uppercase label above the heading, in place of an emoji */
-.persona-box::before {
+/* --- the path label, rendered as a tab on the top edge --- */
+.persona-box::before,
+.persona-section::before {
   display: inline-block;
-  margin-bottom: 10px;
-  padding: 3px 9px;
+  padding: 5px 12px;
+  margin-bottom: 16px;
   border-radius: 999px;
-  font-size: .68rem;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: .09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  line-height: 1;
+}
+
+/* --- choose-your-path cards --- */
+.persona-box {
+  margin: 24px 0;
+  padding: 24px 28px 22px;
+  box-shadow: var(--shadow-sm);
 }
 
 .persona-box > :first-of-type { margin-top: 0; }
@@ -935,296 +915,363 @@ article img + em {
 .persona-box h4 {
   margin-top: 0;
   margin-bottom: 12px;
-  border-bottom: 0;
-  font-size: 1.12rem;
-  line-height: 1.4;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: 1.15rem;
 }
 
-.persona-box p,
-.persona-box li { font-size: .95rem; }
-.persona-box ul { margin-bottom: 14px; }
+/* --- full-step sections --- */
+.persona-section {
+  margin: 40px 0;
+  padding: 28px 32px 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.persona-section > :first-of-type { margin-top: 0; }
+.persona-section > :last-child    { margin-bottom: 0; }
+
+/* The step title carries the path colour and a matching rule */
+.persona-section h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  font-size: 1.5rem;
+}
+
+.persona-section h3 {
+  margin-top: 28px;
+  font-size: 1.15rem;
+}
+
+.persona-section h3:first-of-type { margin-top: 0; }
+
+/* Tables and code keep a white surface so they stay readable on the tint */
+.persona-section table { background: white; }
 
 /* Developer */
-.persona-box.developer {
-  border-left-color: var(--ws-dev-accent);
-  background: linear-gradient(135deg, var(--ws-dev-bg) 0%, var(--ws-dev-bg-end) 100%);
+.persona-box.developer,
+.persona-section.developer {
+  border-left-color: var(--path-dev);
+  background: linear-gradient(160deg, var(--path-dev-tint) 0%, #FFFFFF 75%);
 }
-.persona-box.developer::before {
+.persona-box.developer::before,
+.persona-section.developer::before {
   content: "Developer path";
-  background: var(--ws-dev-chip-bg);
-  color: var(--ws-dev-heading);
+  background: var(--path-dev-chip);
+  color: var(--path-dev-dark);
 }
 .persona-box.developer h2,
 .persona-box.developer h3,
-.persona-box.developer h4 { color: var(--ws-dev-heading); }
-.persona-box.developer li::marker { color: var(--ws-dev-accent); }
+.persona-box.developer h4,
+.persona-section.developer h2,
+.persona-section.developer h3 { color: var(--path-dev-dark); }
+.persona-section.developer h2 { border-bottom: 2px solid var(--path-dev); }
+.persona-box.developer li::marker,
+.persona-section.developer li::marker { color: var(--path-dev); }
 
 /* SRE / Platform */
-.persona-box.sre {
-  border-left-color: var(--ws-sre-accent);
-  background: linear-gradient(135deg, var(--ws-sre-bg) 0%, var(--ws-sre-bg-end) 100%);
+.persona-box.sre,
+.persona-section.sre {
+  border-left-color: var(--path-sre);
+  background: linear-gradient(160deg, var(--path-sre-tint) 0%, #FFFFFF 75%);
 }
-.persona-box.sre::before {
+.persona-box.sre::before,
+.persona-section.sre::before {
   content: "SRE / Platform path";
-  background: var(--ws-sre-chip-bg);
-  color: var(--ws-sre-heading);
+  background: var(--path-sre-chip);
+  color: var(--path-sre-dark);
 }
 .persona-box.sre h2,
 .persona-box.sre h3,
-.persona-box.sre h4 { color: var(--ws-sre-heading); }
-.persona-box.sre li::marker { color: var(--ws-sre-accent); }
+.persona-box.sre h4,
+.persona-section.sre h2,
+.persona-section.sre h3 { color: var(--path-sre-dark); }
+.persona-section.sre h2 { border-bottom: 2px solid var(--path-sre); }
+.persona-box.sre li::marker,
+.persona-section.sre li::marker { color: var(--path-sre); }
 
-/* Step headings that belong to a path.
-   <h2 class="step-dev">Step 2: …</h2>  /  <h2 class="step-sre">…</h2>
-   In markdown:  ## Step 2: Investigate the RAG Pipeline
-                 {: .step-dev } */
-.step-dev,
-.step-sre {
-  padding-left: 14px;
-  border-left: 4px solid;
-  border-radius: 2px;
+/* Blockquotes inside a path adopt its colour instead of purple */
+.persona-section.sre blockquote {
+  background: var(--path-sre-chip);
+  border-left-color: var(--path-sre);
 }
-.step-dev { border-left-color: var(--ws-dev-accent); }
-.step-sre { border-left-color: var(--ws-sre-accent); }
-
-.step-dev::after,
-.step-sre::after {
-  display: inline-block;
-  margin-left: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: .6rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  vertical-align: middle;
-}
-.step-dev::after {
-  content: "Developer";
-  background: var(--ws-dev-chip-bg);
-  color: var(--ws-dev-heading);
-}
-.step-sre::after {
-  content: "SRE";
-  background: var(--ws-sre-chip-bg);
-  color: var(--ws-sre-heading);
-}
+.persona-section.sre blockquote strong { color: var(--path-sre-dark); }
 
 /* --------------------------------------------------------------------------
-   3. Comparison panel  ("Why Dynatrace", "From Analysis to Automation")
-   <div class="why-dynatrace" markdown="1"> … </div>
+   3. Comparison panel ("Why Dynatrace", "From Analysis to Automation")
    -------------------------------------------------------------------------- */
 
 .why-dynatrace {
   margin: 28px 0;
-  padding: 20px 24px;
-  border: 1px solid var(--ws-border);
-  border-left: 4px solid var(--ws-why-accent);
-  border-radius: var(--ws-radius-sm) var(--ws-radius) var(--ws-radius) var(--ws-radius-sm);
-  background: var(--ws-why-bg);
+  padding: 22px 26px;
+  border: 1px solid var(--gray-200);
+  border-left: 5px solid var(--dt-orange);
+  border-radius: var(--radius-lg);
+  background: #FFFBF4;
 }
 .why-dynatrace > :first-child { margin-top: 0; }
 .why-dynatrace > :last-child  { margin-bottom: 0; }
-.why-dynatrace h2,
-.why-dynatrace h3 {
+.why-dynatrace h2 {
   margin-top: 0;
-  border-bottom: 0;
-  font-size: 1.12rem;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: 1.25rem;
 }
-.why-dynatrace table { margin: 14px 0; background: #fff; }
+.why-dynatrace table { background: white; }
 
 /* --------------------------------------------------------------------------
-   4. Checkpoint card
-   Placed immediately BEFORE the troubleshooting appendix, so attendees who
-   pass can jump straight to the next lab without scrolling through it.
+   4. Checkpoint card — on-brand purple
    -------------------------------------------------------------------------- */
 
 .lab-checkpoint {
-  margin: 40px 0 28px;
-  padding: 24px 28px 22px;
-  border: 1px solid #dbeafe;
-  border-top: 4px solid var(--ws-check-accent);
-  border-radius: var(--ws-radius);
-  background: var(--ws-check-bg);
-  box-shadow: var(--ws-shadow);
+  margin: 48px 0 32px;
+  padding: 28px 32px 24px;
+  border: 1px solid var(--dt-purple-subtle);
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(135deg, var(--dt-purple) 0%, var(--dt-purple-light) 100%) 1;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, #FAF7FF 0%, #FFFFFF 70%);
+  box-shadow: var(--shadow-md);
+}
+
+/* border-image removes the radius in some browsers — restore with a fallback */
+@supports (border-image: linear-gradient(red, red) 1) {
+  .lab-checkpoint {
+    border-image: none;
+    border-top: 4px solid var(--dt-purple);
+    border-radius: var(--radius-lg);
+  }
 }
 
 .lab-checkpoint > :first-child { margin-top: 0; }
 
 .lab-checkpoint h2 {
   margin-top: 0;
-  margin-bottom: 6px;
-  border-bottom: 0;
-  font-size: 1.2rem;
-  color: var(--ws-check-heading);
+  margin-bottom: 4px;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: 1.35rem;
+  color: var(--dt-purple-dark);
 }
 
 .lab-checkpoint .checkpoint-intro {
-  margin-bottom: 16px;
-  font-size: .92rem;
-  color: var(--ws-fg-muted);
+  margin-bottom: 20px;
+  font-size: 0.92rem;
+  color: var(--gray-500);
 }
 
-/* Checklist — square markers that read as checkboxes */
+/* --- checklist --- */
 .lab-checkpoint ul {
-  margin: 0 0 20px;
+  margin: 0 0 8px;
   padding: 0;
   list-style: none;
 }
+
 .lab-checkpoint ul li {
   position: relative;
-  margin: 0 0 9px;
-  padding-left: 30px;
-  font-size: .95rem;
+  margin: 0;
+  padding: 10px 12px 10px 40px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
   line-height: 1.55;
+  transition: background-color 0.15s ease;
 }
+
 .lab-checkpoint ul li::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: .28em;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #93b4f5;
-  border-radius: 4px;
-  background: #fff;
+  left: 10px;
+  top: 12px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--dt-purple-light);
+  border-radius: 5px;
+  background: white;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Button row */
+/* Interactive state, added by workshop.js */
+.lab-checkpoint ul li.ws-task {
+  cursor: pointer;
+  user-select: none;
+}
+.lab-checkpoint ul li.ws-task:hover { background: var(--dt-purple-subtle); }
+.lab-checkpoint ul li.ws-task:focus-visible {
+  outline: 2px solid var(--dt-purple);
+  outline-offset: 2px;
+}
+
+.lab-checkpoint ul li.is-done::before {
+  background: var(--dt-purple);
+  border-color: var(--dt-purple);
+}
+.lab-checkpoint ul li.is-done::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+.lab-checkpoint ul li.is-done {
+  color: var(--gray-500);
+}
+.lab-checkpoint ul li.is-done code { opacity: 0.7; }
+
+/* --- progress line, injected by workshop.js --- */
+.checkpoint-progress {
+  margin: 4px 0 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dt-purple);
+  letter-spacing: 0.01em;
+}
+.checkpoint-progress.is-complete { color: var(--path-sre-dark); }
+
+/* --- buttons --- */
 .checkpoint-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  margin-top: 4px;
-  padding-top: 18px;
-  border-top: 1px solid #dbeafe;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--dt-purple-subtle);
 }
 
-.checkpoint-actions a,
 a.ws-btn-primary,
 a.ws-btn-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 10px 18px;
-  border-radius: var(--ws-radius-sm);
-  font-size: .92rem;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  line-height: 1.2;
-  transition: background-color .15s ease, border-color .15s ease,
-              transform .15s ease, box-shadow .15s ease;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
 }
 
 a.ws-btn-primary {
-  background: var(--ws-check-accent);
-  border: 1px solid var(--ws-check-accent);
-  color: #fff;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, .25);
+  background: linear-gradient(135deg, var(--dt-purple) 0%, var(--dt-purple-dark) 100%);
+  color: white;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 14px rgba(97, 42, 213, 0.3);
 }
 a.ws-btn-primary:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, .28);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(97, 42, 213, 0.4);
+  text-decoration: none;
+  color: white;
 }
 
 a.ws-btn-secondary {
-  background: #fff;
-  border: 1px solid #c7d7f5;
-  color: var(--ws-check-heading);
+  background: white;
+  color: var(--dt-purple);
+  border: 2px solid var(--dt-purple);
 }
 a.ws-btn-secondary:hover {
-  background: #eef4ff;
-  border-color: #93b4f5;
-  color: var(--ws-check-heading);
-  transform: translateY(-1px);
+  background: var(--dt-purple-subtle);
+  text-decoration: none;
+  color: var(--dt-purple-dark);
 }
 
 a.ws-btn-primary:focus-visible,
 a.ws-btn-secondary:focus-visible {
-  outline: 2px solid var(--ws-check-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--dt-purple);
+  outline-offset: 3px;
 }
 
 /* --------------------------------------------------------------------------
-   5. Troubleshooting appendix
-   <div class="appendix" markdown="1"> … </div>
-   Visually demoted: muted surface, smaller type, clear "reference" framing.
+   5. Troubleshooting appendix — deliberately quieter than the lab body
    -------------------------------------------------------------------------- */
 
 .appendix {
-  margin: 44px 0 28px;
-  padding: 26px 28px 22px;
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius);
-  background: var(--ws-surface);
+  margin: 48px 0 32px;
+  padding: 28px 32px 24px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--gray-50);
 }
 
 .appendix::before {
   content: "Appendix — reference only";
   display: block;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--ws-border);
-  font-size: .68rem;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: .1em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ws-fg-muted);
+  color: var(--dt-purple);
 }
 
 .appendix > h2:first-of-type { margin-top: 0; }
 
 .appendix h2 {
-  border-bottom: 0;
-  font-size: 1.15rem;
-  color: var(--ws-fg);
-}
-
-.appendix h3 {
-  margin-top: 24px;
-  margin-bottom: 8px;
   padding-bottom: 0;
-  border-bottom: 0;
-  font-size: .98rem;
-  font-weight: 650;
-  color: var(--ws-fg);
+  border-bottom: none;
+  font-size: 1.25rem;
+  color: var(--gray-800);
 }
-
-.appendix h3 + p,
-.appendix h3 + ul,
-.appendix h3 + ol { margin-top: 6px; }
 
 .appendix p,
-.appendix li { font-size: .92rem; }
+.appendix li { font-size: 0.92rem; }
 
-.appendix pre {
-  font-size: .85rem;
-  background: #fff;
-  border: 1px solid var(--ws-border);
-}
+.appendix pre { font-size: 13px; }
 
 .appendix > :last-child { margin-bottom: 0; }
 
-/* Collapsible variant — wrap entries in <details> if a page has many */
+/* Collapsible entries */
 .appendix details {
   margin: 10px 0;
-  padding: 12px 16px;
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius-sm);
-  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: white;
+  overflow: hidden;
 }
-.appendix details[open] { padding-bottom: 8px; }
+.appendix details[open] { box-shadow: var(--shadow-sm); }
+
 .appendix summary {
+  padding: 14px 18px;
   cursor: pointer;
-  font-size: .94rem;
+  font-size: 0.94rem;
   font-weight: 600;
-  color: var(--ws-fg);
+  color: var(--gray-800);
+  list-style: none;
+  position: relative;
+  padding-right: 44px;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
-.appendix summary:hover { color: var(--ws-check-accent); }
+.appendix summary::-webkit-details-marker { display: none; }
+
+.appendix summary::after {
+  content: "+";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--dt-purple);
+  line-height: 1;
+}
+.appendix details[open] summary::after { content: "–"; }
+
+.appendix summary:hover {
+  color: var(--dt-purple);
+  background: var(--dt-purple-subtle);
+}
+
+.appendix details > *:not(summary) {
+  margin-left: 18px;
+  margin-right: 18px;
+}
+.appendix details > *:last-child { margin-bottom: 16px; }
 
 /* --------------------------------------------------------------------------
    6. Lab navigation footer
@@ -1235,27 +1282,27 @@ a.ws-btn-secondary:focus-visible {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 44px;
-  padding-top: 22px;
-  border-top: 1px solid var(--ws-border);
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
 }
 
 .lab-nav a {
-  padding: 9px 16px;
-  border: 1px solid var(--ws-border);
-  border-radius: var(--ws-radius-sm);
-  font-size: .92rem;
+  padding: 10px 18px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.92rem;
   font-weight: 600;
   text-decoration: none;
-  color: var(--ws-fg);
-  background: #fff;
-  transition: border-color .15s ease, background-color .15s ease,
-              transform .15s ease;
+  color: var(--gray-700);
+  background: white;
+  transition: all 0.2s ease;
 }
 .lab-nav a:hover {
-  border-color: var(--ws-check-accent);
-  background: var(--ws-check-bg);
-  color: var(--ws-check-heading);
+  border-color: var(--dt-purple);
+  background: var(--dt-purple-subtle);
+  color: var(--dt-purple-dark);
+  text-decoration: none;
   transform: translateY(-1px);
 }
 .lab-nav a:last-child:first-child { margin-left: auto; }
@@ -1264,32 +1311,28 @@ a.ws-btn-secondary:focus-visible {
    7. Responsive
    -------------------------------------------------------------------------- */
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .persona-box,
-  .why-dynatrace   { padding: 18px 18px 16px; }
+  .persona-section { padding: 20px 20px 18px; }
+  .persona-section h2 { font-size: 1.3rem; }
   .lab-checkpoint,
-  .appendix        { padding: 20px 18px; }
-
-  .main-content img,
-  .page-content img,
-  article img      { max-height: 300px; }
+  .appendix        { padding: 22px 20px; }
+  .content img     { max-height: 300px; }
 
   .checkpoint-actions { flex-direction: column; align-items: stretch; }
   .checkpoint-actions a { justify-content: center; }
 
   .lab-nav { flex-direction: column; }
   .lab-nav a { text-align: center; }
-
-  .step-dev::after,
-  .step-sre::after { display: none; }
 }
 
 /* --------------------------------------------------------------------------
-   8. Print — drop decoration, keep content
+   8. Print
    -------------------------------------------------------------------------- */
 
 @media print {
   .persona-box,
+  .persona-section,
   .why-dynatrace,
   .lab-checkpoint,
   .appendix {
@@ -1297,6 +1340,8 @@ a.ws-btn-secondary:focus-visible {
     box-shadow: none;
     border: 1px solid #ccc;
   }
+  .appendix details { display: block; }
+  .appendix details > *:not(summary) { display: block; }
   .checkpoint-actions,
   .lab-nav { display: none; }
 }
