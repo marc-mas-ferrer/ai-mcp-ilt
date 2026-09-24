@@ -1,237 +1,278 @@
-# 🎯 Dynatrace AI Observability & MCP Workshop
+# Dynatrace AI Observability & MCP Workshop
 
-> [!IMPORTANT]  
-> Collaborators are not being added, and the workshop token is not being rotated to avoid impacting active workshops. Please contact the internal team to obtain the current workshop token.
+A hands-on workshop for learning AI/LLM observability with Dynatrace, OpenTelemetry, OpenLLMetry and the Model Context Protocol (MCP).
 
-A hands-on workshop for learning AI/LLM observability with Dynatrace and the Model Context Protocol (MCP).
+Attendees run a small RAG chat service in a GitHub Codespace, instrument it with OpenLLMetry, analyse the resulting traces and logs in Dynatrace, investigate the service from the IDE with Dynatrace MCP, and automate a token-usage check with a Dynatrace Workflow.
 
 ---
 
-> ## 🚀 **Workshop Attendees: Start Here!**
+> ## **Workshop Attendees: Start Here!**
 > 
-> ### [![📖 Open Workshop Guide](https://img.shields.io/badge/📖_Open_Workshop_Guide-Click_Here_to_Start-blue?style=for-the-badge&logoColor=white)](https://marc-mas-ferrer.github.io/ai-mcp-ilt)
+> ### [![📖 Open the guide](https://img.shields.io/badge/📖_Open_Workshop_Guide-Click_Here_to_Start-blue?style=for-the-badge&logoColor=white)](https://marc-mas-ferrer.github.io/ai-mcp-ilt)
 >
 > The guide walks you through launching your Codespace, configuring your environment, and completing all labs with detailed instructions, code snippets, and screenshots.
 
 ---
 
-## 📋 Workshop Overview
+## Workshop overview
 
+| | |
+|---|---|
 | **Duration** | 2 - 2.5 hours |
-|--------------|---------------|
 | **Level** | Intermediate |
-| **Format** | Hands-on Labs |
+| **Format** | Hands-on labs |
 | **Platform** | GitHub Codespaces |
+| **Language** | Python 3.11 |
 
-### What You'll Learn
+### What you will learn
 
-- ✅ Instrument AI/LLM applications with OpenLLMetry
-- ✅ Send traces to Dynatrace via OTLP
-- ✅ Analyze LLM performance, token usage, and costs
-- ✅ Use Dynatrace MCP for agentic AI workflows
-- ✅ Automate AI cost monitoring with Dynatrace Workflows
-
----
-
-## 📚 Workshop Labs
-
-| Lab | Duration | Description |
-|-----|----------|-------------|
-| [Lab 0: Setup](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab0-setup.html) | 15 min | Environment configuration |
-| [Lab 1: Instrumentation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab1-instrumentation.html) | 15 min | Add OpenLLMetry to the sample app |
-| [Lab 2: Explore Traces](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab2-explore-traces.html) | 30 min | Analyze AI traces in Dynatrace |
-| [Lab 3: Dynatrace MCP](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab3-dynatrace-mcp.html) | 30 min | Use MCP for agentic AI |
-| [Lab 4: Automation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab4-automation.html) | 30 min | Create automated workflows |
+- Instrument a Python AI application with OpenLLMetry (Traceloop)
+- Send traces and logs to Dynatrace over OTLP
+- Analyse LLM calls, token usage, RAG stages and errors in Dynatrace
+- Query your own telemetry from VS Code using Dynatrace MCP
+- Automate a token-usage and cost check with a Dynatrace Workflow
 
 ---
 
-## 👨‍🏫 Instructor Setup
+## Labs
 
-### How It Works
+| Lab | Focus |
+|---|---|
+| [Lab 0 - Setup](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab0-setup.html) | Launch the Codespace, fill in `.env`, run the configuration script |
+| [Lab 1 - Instrumentation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab1-instrumentation.html) | Enable the Traceloop dependency and initialise OpenLLMetry |
+| [Lab 2 - Explore traces](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab2-explore-traces.html) | Analyse spans, prompts, token usage and cost in Dynatrace |
+| [Lab 3 - Dynatrace MCP](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab3-dynatrace-mcp.html) | Investigate the service from GitHub Copilot in VS Code |
+| [Lab 4 - Automation](https://marc-mas-ferrer.github.io/ai-mcp-ilt/lab4-automation.html) | Build a workflow that evaluates token usage and notifies |
 
-> **Attendees share the same repository**—they don't fork it. Each attendee launches their own isolated Codespace, and all their code modifications stay private to that Codespace session.
-
-The workshop uses a pre-deployed **Azure Function secrets server** to securely distribute Azure OpenAI credentials. Attendees enter a workshop token—they never see the actual API keys.
-
----
-
-### 🛤️ Choose Your Setup Path
-
-There are **two ways** to run this workshop as an instructor:
-
-| Path | Best For | Requirements |
-|------|----------|--------------|
-| **Option A: Use Existing Infrastructure** | Most instructors | Collaborator access to this repository |
-| **Option B: Stand Up Your Own** | Using your own Dynatrace tenant + Azure OpenAI | Azure subscription + deployment skills |
+The source for the guide lives in the `docs/` folder and is published as the workshop site.
 
 ---
 
-### Option A: Use Existing Infrastructure (Recommended)
+## Architecture
 
-Use the pre-deployed Azure OpenAI pipeline and secrets server. This is the fastest way to get started.
+```text
+Browser (chat UI served by FastAPI)
+  │
+  ▼
+GitHub Codespace
+  ├── FastAPI application (app/main.py)
+  ├── LangChain RAG orchestration
+  ├── Local deterministic vectoriser (no model download, no network call)
+  ├── In-memory ChromaDB collection
+  ├── OpenTelemetry logging  ──────────► Dynatrace (OTLP /v1/logs)
+  ├── FastAPI OTel instrumentation ────► Dynatrace
+  └── OpenLLMetry / Traceloop (added in Lab 1) ──► Dynatrace
+  │
+  └── Chat completions ───────────────► LiteLLM gateway ──► Amazon Bedrock (Amazon Nova Micro)
+```
 
-#### Prerequisites
-
-1. **GitHub Account** with Codespaces enabled
-2. **Collaborator access to this repository** — Required to run the GitHub Action that rotates workshop tokens. Contact the repository owner to be added as a collaborator.
-3. **Dynatrace Environment** (playground/demo tenant) — You provide your own Dynatrace credentials to attendees
-
-#### Setup Steps (Before Each Workshop)
-
-##### 1. Rotate the Workshop Token
-
-> ⚠️ **You must be a collaborator on this repository to run this GitHub Action.**
-
-Use the **"Rotate Workshop Token"** GitHub Action:
-
-1. Go to **Actions** → **Rotate Workshop Token**
-2. Click **Run workflow**
-3. Enter a memorable token (e.g., `perform2026`, `acepaces`, `dynatraceai`)
-4. The summary will confirm the new token
-
-> 💡 **Tip:** Rotate the token before and after each workshop session for security.
-
-##### 2. Create Dynatrace API Token (for OTLP Traces)
-
-Create an API token in your Dynatrace tenant with these permissions:
-- `openTelemetryTrace.ingest`
-- `metrics.ingest`
-- `entities.read`
-- `problems.read`
-- `logs.read`
-- `DataExport`
-
-##### 3. Create Dynatrace Platform Token (for MCP)
-
-> ⚠️ **Required for Lab 3!** This token enables the Dynatrace Remote MCP server.
-
-Create a **Platform token** in your Dynatrace tenant with these scopes:
-- `mcp-gateway:servers:invoke`
-- `mcp-gateway:servers:read`
-- `davis:analyzers:read`
-- `davis:analyzers:execute`
-- `davis-copilot:conversations:execute`
-- `davis-copilot:nl2dql:execute`
-- `davis-copilot:dql2nl:execute`
-- `davis-copilot:document-search:execute`
-- `storage:events:read`
-- `storage:metrics:read`
-- `storage:logs:read`
-- `storage:buckets:read`
-- `storage:files:read`
-- `storage:security.events:read`
-- `storage:entities:read`
-- `storage:spans:read`
-- `storage:bizevents:read`
-- `storage:smartscape:read`
-
-**Add to Secrets Server:** Use the **"Update MCP Token"** GitHub Action to update `DT_MCP_BEARER_TOKEN` in the secrets server (requires collaborator access). The `fetch-secrets.sh` script will automatically distribute this to attendees.
-
-##### 4. Prepare Attendee Credentials
-
-Create a shared document or slide with:
-
-| Credential | Value | Notes |
-|------------|-------|-------|
-| `WORKSHOP_TOKEN` | The token you set in Step 1 | For Azure OpenAI + MCP access |
-| `DT_ENDPOINT` | `https://YOUR_ENV.live.dynatrace.com/api/v2/otlp` | Include `/api/v2/otlp` suffix! |
-| `DT_API_TOKEN` | Your Dynatrace API token | From Step 2 |
-
-> **Note:** The Dynatrace MCP Platform token (`DT_MCP_BEARER_TOKEN`) is distributed automatically via `fetch-secrets.sh` — attendees don't need to enter it manually.
+Only chat completions leave the Codespace for the model gateway. Retrieval vectors are produced locally, so there is no embedding-model API call and no embedding-provider span.
 
 ---
 
-### Option B: Stand Up Your Own Infrastructure
+## The sample application
 
-If you want complete control over the Azure OpenAI resources and secrets server (e.g., using your own Azure subscription and Dynatrace tenant), you'll need to deploy your own infrastructure.
+A small Retrieval Augmented Generation service built with FastAPI, LangChain and ChromaDB.
 
-#### Prerequisites
+### Retrieval
 
-1. **Azure Subscription** with permissions to create:
-   - Azure OpenAI resource with `gpt-4o` and `text-embedding-3-large` deployments
-   - Azure Function App for the secrets server
-2. **Dynatrace Environment** (your own tenant)
-3. **GitHub Repository** (fork this repo for your own use)
+- The knowledge base is defined in code, in the `SAMPLE_DOCUMENTS` list in `app/main.py`.
+- Documents are split with `RecursiveCharacterTextSplitter` using a chunk size of 500 and an overlap of 50.
+- Vectors are produced by `LocalHashingEmbeddings`, a deterministic 384-dimension feature-hashing embedder. It combines word features, adjacent-word bigrams and character n-grams, hashes them with SHA-256 and applies L2 normalisation.
+- Chunks are stored in an in-memory Chroma collection named `workshop_{ATTENDEE_ID}`.
+- Each RAG request retrieves the three most relevant chunks.
 
-#### Setup Steps
+The local vectoriser is intentionally simple and dependency-free so the workshop runs identically for every attendee. A production RAG system would normally use a trained embedding model.
 
-1. **Deploy Azure OpenAI Resource** — Create model deployments for chat and embeddings
-2. **Deploy the Secrets Server** — See [secrets-server/README.md](secrets-server/README.md) for detailed deployment instructions
-3. **Configure GitHub Actions** — Set up the `ADMIN_SECRET` secret and `AZURE_FUNCTION_APP_NAME` variable in your forked repository
-4. **Update Codespace Configuration** — Modify `.devcontainer/fetch-secrets.sh` to point to your secrets server URL
+### Request flow
 
-For detailed instructions, see the [Instructor Guide](INSTRUCTOR_GUIDE.md).
+With **Use Knowledge Base (RAG)** enabled, a `/chat` request runs a workflow with these stages:
 
----
+1. `analyze_query_intent` - a short LLM call that classifies the question
+2. `retrieve_documents` - local vectorisation plus a ChromaDB similarity search
+3. `generate_context` - formats the retrieved chunks
+4. `generate_response` - the main LLM call, using the retrieved context
+5. source summarisation for the response payload
 
-### 🔧 Existing Secrets Server (Option A)
-
-The Azure Function secrets server is already deployed at `workshop-secrets-server.azurewebsites.net` and is ready to use.
-
-For maintenance, configuration changes, or troubleshooting, see [secrets-server/README.md](secrets-server/README.md).
-
----
-
-## 🔧 The Sample Application
-
-### Overview
-
-A RAG (Retrieval Augmented Generation) service built with:
-- **FastAPI** - Web framework
-- **Azure OpenAI** - LLM provider
-- **LangChain** - Orchestration
-- **ChromaDB** - Vector store
-
-### Key Features
-
-- 🎨 **Beautiful Chat UI** - Interactive web interface for conversations
-- 📚 Pre-loaded with Dynatrace-related knowledge
-- 🏷️ Unique service naming per attendee (`ai-chat-service-{ATTENDEE_ID}`)
-- 🔬 Ready for OpenLLMetry instrumentation
+So one RAG request produces **two** chat-model calls. With RAG disabled, the request makes a single direct model call and skips retrieval.
 
 ### Endpoints
 
 | Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Chat UI (web interface) |
-| `/chat` | POST | Chat API endpoint |
-| `/info` | GET | Service information |
+|---|---|---|
+| `/` | GET | Chat UI |
+| `/chat` | POST | Chat API (`message`, `use_rag`, `simulate_errors`) |
+| `/documents` | POST | Add content to the in-memory vector store |
+| `/info` | GET | Service name, attendee ID, model and vectoriser details |
 | `/health` | GET | Health check |
-| `/documents` | POST | Add documents to knowledge base |
+| `/api/health` | GET | Health check used by the UI |
+
+### Error simulation
+
+The UI has a **Simulate Errors** toggle. When enabled, the service always raises a simulated failure, chosen at random from a set of realistic RAG scenarios such as a null vector, a missing Chroma collection, a malformed gateway response, an exceeded context window, an empty retrieval result, a chain timeout, a content-filter block, or a vector-dimension mismatch.
+
+Each simulated failure writes a structured error log with an error code and stage, flushes the log to Dynatrace, and returns HTTP 500. This gives attendees real failure data to investigate.
+
+### Chat UI
+
+`app/static/index.html` is a single self-contained page with inline styles and scripts. It reads service details from `/info`, posts to `/chat`, renders Markdown responses, highlights code blocks, shows retrieved sources when present, and aborts a request after two minutes. Fonts, Marked and Highlight.js are loaded from public CDNs, so the Codespace needs internet access.
 
 ---
 
-## 📊 What Gets Traced
+## What is instrumented, and when
 
-After instrumentation, Dynatrace captures:
+Part of the observability stack is already in place before Lab 1.
 
-| Span Type | Data Captured |
-|-----------|---------------|
-| HTTP Requests | Endpoint, status, duration |
-| Embeddings | Model, token count, latency |
-| Vector Search | Query count, results |
-| LLM Completion | Model, tokens, prompt/response |
+**Already configured in the repository:**
 
----
+- OpenTelemetry logging to Dynatrace, exported to `{DT_ENDPOINT}/v1/logs` with `Api-Token` authentication, using a batch processor and the resource attribute `service.name = ai-chat-service-{ATTENDEE_ID}`
+- FastAPI OpenTelemetry instrumentation, which creates the HTTP parent spans
+- `@workflow` and `@task` decorators on the RAG pipeline functions, imported conditionally
 
-## 🔐 Security Notes
+**Added by the attendee in Lab 1:**
 
-- Azure OpenAI credentials are distributed via a secure secrets server with rotating workshop tokens
-- Attendees never see the raw Azure OpenAI API key—it's fetched automatically
-- Workshop tokens should be rotated after each workshop session
-- Dynatrace tokens should be rotated after workshops
-- Consider using a dedicated playground tenant
+- Uncommenting `traceloop-sdk` in `app/requirements.txt`
+- Initialising Traceloop with the attendee service name, the Dynatrace OTLP endpoint and the API token
+
+If Traceloop is not installed, the application still runs. The decorators fall back to no-ops and the `Traceloop.set_association_properties` call is skipped, so the RAG hierarchy and AI-specific attributes simply do not appear until Lab 1 is complete.
+
+When Traceloop is active, each chat request also records association properties for the user question, the RAG setting and the error-simulation setting.
 
 ---
 
-## 📝 License
+## Configuration
 
-This workshop is provided for educational purposes. See [LICENSE](LICENSE) for details.
+All configuration lives in a single `.env` file at the repository root.
+
+| Variable | Purpose |
+|---|---|
+| `ATTENDEE_ID` | Written by `configure.sh`; drives the service and collection names |
+| `LLM_BASE_URL` | LiteLLM gateway base URL; must end with `/v1` |
+| `LLM_API_KEY` | Workshop gateway key |
+| `LLM_CHAT_MODEL` | Must be `workshop-chat` |
+| `DT_ENDPOINT` | Dynatrace OTLP endpoint; must end with `/api/v2/otlp` |
+| `DT_API_TOKEN` | Dynatrace ingest token for traces and logs |
+| `DT_MCP_BEARER_TOKEN` | Dynatrace platform token used by the MCP server in Lab 3 |
+
+Optional overrides: `APP_HOST` (default `0.0.0.0`) and `APP_PORT` (default `8000`).
+
+Do not commit `.env`.
 
 ---
 
-## 🙏 Acknowledgments
+## Attendee setup
 
-- [OpenLLMetry / Traceloop](https://github.com/traceloop/openllmetry)
-- [Dynatrace](https://www.dynatrace.com)
-- [OpenTelemetry](https://opentelemetry.io)
+1. **Launch the Codespace.** The devcontainer uses the Python 3.11 image, adds Node.js 20, installs the Python, Pylance, Copilot, Copilot Chat, YAML and Prettier extensions, and forwards port 8000, opening the chat UI in a browser automatically.
+
+2. **Let `setup.sh` finish.** It runs automatically after creation, installs everything in `app/requirements.txt`, and creates a guided `.env` with `PASTE_HERE` placeholders. An existing `.env` is never overwritten.
+
+3. **Fill in `.env`** with the credential values provided by the instructor. Leave `ATTENDEE_ID` empty.
+
+4. **Run the personalised configuration command:**
+
+   ```bash
+   bash .devcontainer/configure.sh --attendee-id=YOUR_WORKSHOP_ID
+   ```
+
+   The Workshop ID is lower-cased and must be 2-31 characters of lowercase letters, numbers and hyphens. Email addresses are rejected.
+
+   The script writes the ID into `.env`, verifies that every required variable is present and not still `PASTE_HERE`, checks that `LLM_BASE_URL` ends with `/v1`, that `LLM_CHAT_MODEL` is `workshop-chat`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`, warns about unexpected token prefixes, exports the values into `~/.bashrc` for future terminals, and configures the authorization header in the workspace copy of `.vscode/mcp.json`. Secret values are validated but never printed.
+
+5. **Reload VS Code** with *Developer: Reload Window*, so Copilot and the MCP client pick up the new configuration.
+
+6. **Start the application:**
+
+   ```bash
+   python app/main.py
+   ```
+
+   The service starts on port 8000 with reload enabled, and your service appears in Dynatrace as `ai-chat-service-{ATTENDEE_ID}`.
+
+If RAG initialisation fails at startup, the application stops with an error instead of serving degraded results.
+
+---
+
+## Dynatrace MCP (Lab 3)
+
+MCP is configured in `.vscode/mcp.json` as an SSE server named `Dynatrace-MCP`, pointing at the Dynatrace MCP gateway endpoint. The bearer token comes from `DT_MCP_BEARER_TOKEN` and is applied to the workspace copy by `configure.sh`.
+
+`configure.sh` fails if `.vscode/mcp.json` is missing or has no authorization header, because Lab 3 cannot run without it.
+
+Never paste a platform token directly into `.vscode/mcp.json`, and never commit one.
+
+---
+
+## Instructors: what the repository requires
+
+This is not a setup runbook. It is the contract the repository enforces, so that whatever you stand up is accepted by `configure.sh`.
+
+Attendees paste six values into `.env`. Everything else is derived.
+
+| Value | Constraint enforced by `configure.sh` |
+|---|---|
+| `LLM_BASE_URL` | Must end with `/v1` |
+| `LLM_API_KEY` | Warns if it does not start with `sk-workshop-` |
+| `LLM_CHAT_MODEL` | Must be exactly `workshop-chat`; any other value is rejected |
+| `DT_ENDPOINT` | Must end with `/api/v2/otlp` |
+| `DT_API_TOKEN` | Warns if it does not start with `dt0c01.` |
+| `DT_MCP_BEARER_TOKEN` | Warns if it does not start with `dt0s16.` |
+
+So your gateway must publish the model alias `workshop-chat`, and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
+
+`configure.sh` also fails outright if `.vscode/mcp.json` is missing or has no `Authorization` header, because Lab 3 cannot run without it.
+
+Attendees choose their own Workshop ID, so nothing per-attendee needs preparing.
+
+Rotate the gateway key and the Dynatrace tokens after each session, and prefer a dedicated playground tenant.
+
+> Token scopes, gateway deployment and the Lab 4 Grail pricing lookup are not visible from this repository. Keep those in the instructor guide.
+
+---
+
+## Repository layout
+
+```text
+.devcontainer/
+  devcontainer.json     Codespace definition
+  setup.sh              Dependency install and guided .env creation
+  configure.sh          Workshop ID, validation, env persistence, MCP token
+.vscode/
+  mcp.json              Dynatrace MCP server definition
+app/
+  main.py               FastAPI service, RAG pipeline, local vectoriser
+  requirements.txt      Dependencies, with traceloop-sdk commented out for Lab 1
+  static/index.html     Self-contained chat UI
+docs/                   Published workshop guide
+```
+
+---
+
+## Troubleshooting
+
+**No traces in Dynatrace.** Traces appear only after Lab 1. Confirm that `traceloop-sdk` is uncommented and installed, that the Traceloop initialisation sits below the marker and after `load_dotenv()`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`.
+
+**Logs but no AI spans.** Logging and FastAPI instrumentation are configured independently, so logs can arrive before OpenLLMetry is initialised. That is expected before Lab 1.
+
+**Startup fails immediately.** RAG initialisation requires `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_CHAT_MODEL`. Re-run `configure.sh` and read its validation output.
+
+**MCP tools missing in Copilot.** Reload the VS Code window, check that `.vscode/mcp.json` is valid JSON, and confirm the token is present and unexpired.
+
+**Knowledge base looks empty after a restart.** The vector store is in memory. Anything added through `/documents` is lost when the process stops.
+
+---
+
+## Security notes
+
+- `.env` holds live workshop credentials. Keep it out of version control.
+- `configure.sh` validates secrets without echoing them.
+- Attendee changes stay inside each isolated Codespace.
+- Rotate the gateway key and Dynatrace tokens after every workshop.
+
+---
+
+## Acknowledgments
+
+- OpenLLMetry / Traceloop
+- Dynatrace
+- OpenTelemetry
+- LangChain and ChromaDB

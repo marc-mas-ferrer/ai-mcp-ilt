@@ -4,7 +4,7 @@ title: Lab 4 - Workflow Automation
 nav_order: 6
 ---
 
-# ⚡ Lab 4: Automating AI Usage Monitoring
+# Lab 4: Automating AI Usage Monitoring
 
 **Duration:** ~30 minutes
 
@@ -14,7 +14,7 @@ This turns the DQL analysis created in Lab 2 into a repeatable automated process
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 By the end of this lab, you will be able to:
 
@@ -29,7 +29,7 @@ By the end of this lab, you will be able to:
 
 <div class="why-dynatrace" markdown="1">
 
-## 🏆 From Analysis to Automation
+## From Analysis to Automation
 
 In Lab 2, you manually queried token usage and estimated model cost.
 
@@ -121,7 +121,7 @@ For the workshop, configure it to run every:
 
 You will also run the workflow manually, so you do not need to wait for the scheduled execution.
 
-> 💡 In a real environment, the schedule should reflect the required monitoring frequency and the expected volume of telemetry.
+> In a real environment, the schedule should reflect the required monitoring frequency and the expected volume of telemetry.
 
 ---
 
@@ -176,33 +176,23 @@ fetch spans
 | sort total_tokens desc
 ```
 
+This is the same query you built in Lab 2, now running on a schedule instead of in a Notebook.
+
+> **A fixed timeframe means repeated counting.** The workflow re-runs the same query every 15 minutes, so a wide timeframe will count the same tokens again on each execution. That is acceptable for the workshop, where the goal is to see the mechanism work. A production version would normally query only the period since the previous run.
+
 ### 3.2 Test the task
 
 Use the task's test or run option.
 
-The result should contain at least one record with:
-
-- The recorded model
-- Request count
-- Input tokens
-- Output tokens
-- Total tokens
-- Estimated cost
+The result should contain at least one record with the recorded model, request count, input and output tokens, total tokens, and estimated cost.
 
 The estimated cost will be very small. This is expected because Amazon Nova Micro is inexpensive and the workshop generates limited traffic.
 
 ### 3.3 Understand the result
 
-The workflow query:
+The query groups by `gen_ai.response.model`, so you get one row per model identifier recorded in your spans.
 
-1. Retrieves spans for your attendee-specific service
-2. Keeps spans that contain input-token usage
-3. Aggregates token consumption by model
-4. Loads the Bedrock pricing lookup
-5. Matches the recorded model with its pricing
-6. Calculates the estimated model cost
-
-The query supports both model identifiers stored in the lookup table.
+In Lab 2 you checked which identifier the instrumentation actually uses. If both `workshop-chat` and `us.amazon.nova-micro-v1:0` appear in your data, this query returns two rows, sorted with the highest token usage first. The condition and notification in the next steps read only the first row, which is worth remembering when you interpret the result.
 
 ---
 
@@ -222,7 +212,7 @@ Configure the condition to continue only when the first result contains more tha
 
 {% endraw %}
 
-> 💡 The threshold is deliberately low so that the condition can be tested during the workshop. It is not a recommended production threshold.
+> The threshold is deliberately low so that the condition can be tested during the workshop. It is not a recommended production threshold.
 
 ### 4.2 Connect the tasks
 
@@ -372,19 +362,11 @@ This confirms that the workflow does not send a notification on every execution.
 
 ---
 
-## Step 7: Extend the Workflow with a Usage Summary
+## Step 7: Find the Operations Using the Most Tokens
 
-If time permits, add a second DQL task that identifies the operations consuming the most tokens.
+If time permits, run this query in your workshop Notebook to see which operations consume the most tokens.
 
-### 7.1 Add the query
-
-Create another **Execute DQL query** task named:
-
-```text
-get_usage_by_operation
-```
-
-Use:
+This is an analysis query rather than part of the workflow, so it does not need a task or a connection.
 
 ```dql
 // Token usage by operation
@@ -405,8 +387,6 @@ fetch spans
 | limit 10
 ```
 
-### 7.2 Review the result
-
 Use the result to identify:
 
 - Which LLM operation consumed the most tokens
@@ -414,7 +394,9 @@ Use the result to identify:
 - Whether one operation has an unusually high average
 - Whether a small number of requests generated most of the usage
 
-Do not add token totals from parent workflow spans and child LLM spans unless both contain token attributes. The query deliberately includes only spans with `gen_ai.usage.input_tokens`.
+If you want this inside the workflow, add it as a second **Execute DQL query** task named `get_usage_by_operation`, connected directly to the trigger so that it runs independently of the condition. You can then reference its result in the notification message.
+
+> Do not add token totals from parent workflow spans and child LLM spans unless both contain token attributes. The query deliberately includes only spans with `gen_ai.usage.input_tokens`.
 
 ---
 
@@ -435,24 +417,19 @@ A simple multiplication of one workshop execution by 30 is not a reliable monthl
 
 ---
 
-## ✅ Checkpoint
+## Checkpoint
 
 Before completing the lab, verify that:
 
-- [ ] You created `AI Usage Monitor - {YOUR_ATTENDEE_ID}`
-- [ ] The workflow uses a time interval trigger
-- [ ] `get_token_usage` executes successfully
-- [ ] The query loads `/lookups/ai/bedrock/model-costs`
-- [ ] The query calculates total input and output tokens
-- [ ] The query calculates an estimated cost
-- [ ] The condition references the result of `get_token_usage`
-- [ ] You tested both the true and false condition paths
-- [ ] You reviewed the workflow execution details
-- [ ] You configured a notification or reviewed why no connection was available
+- You created `AI Usage Monitor - {YOUR_ATTENDEE_ID}` with a time interval trigger
+- `get_token_usage` executes successfully, loads the pricing lookup, and returns token totals with an estimated cost
+- The condition references the result of `get_token_usage`
+- You tested both the true and false condition paths
+- You reviewed the workflow execution details and either configured a notification or confirmed why no connection was available
 
 ---
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### The DQL task returns no records
 
@@ -505,19 +482,7 @@ Then inspect the lookup:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The value in `gen_ai.response.model` must exist in the lookup table's `model` field.
-
-Expected values include:
-
-```text
-workshop-chat
-```
-
-and:
-
-```text
-us.amazon.nova-micro-v1:0
-```
+The value in `gen_ai.response.model` must exist in the lookup table's `model` field. Expected values are `workshop-chat` and `us.amazon.nova-micro-v1:0`.
 
 If a different value is recorded, the instructor must add that exact value to the lookup table.
 
@@ -525,15 +490,10 @@ If a different value is recorded, the instructor must add that exact value to th
 
 Confirm that:
 
-1. The path is exactly:
-
-```text
-/lookups/ai/bedrock/model-costs
-```
-
-2. Your workshop account has `storage:files:read`.
-3. The lookup was uploaded successfully.
-4. The table is available in the same Dynatrace environment.
+1. The path is exactly `/lookups/ai/bedrock/model-costs`
+2. Your workshop account can read Grail lookup files
+3. The lookup was uploaded successfully
+4. The table is available in the same Dynatrace environment
 
 ### The condition fails with `records[0]`
 
@@ -543,11 +503,7 @@ Run `get_token_usage` independently and resolve the missing-data or lookup issue
 
 ### The condition always evaluates to false
 
-Open the output of `get_token_usage` and note the value of:
-
-```text
-total_tokens
-```
+Open the output of `get_token_usage` and note the value of `total_tokens`.
 
 Set the workshop threshold below that value and run the workflow again.
 
@@ -557,12 +513,7 @@ Do not leave an artificially low threshold in a production workflow.
 
 The notification connection may not be installed or configured in the workshop environment.
 
-You can still complete the core exercise by:
-
-1. Running the workflow manually
-2. Inspecting the DQL task result
-3. Confirming the condition result
-4. Reviewing which branch would have executed
+You can still complete the core exercise by running the workflow manually, inspecting the DQL task result, confirming the condition result, and reviewing which branch would have executed.
 
 ### The notification task fails
 
@@ -578,13 +529,7 @@ Use the workflow execution details to identify which field failed.
 
 ### The notification contains an empty model value
 
-The field name contains dots:
-
-```text
-gen_ai.response.model
-```
-
-Use bracket notation if the workflow expression editor does not accept dot notation:
+The field name contains dots, so the expression editor may not accept dot notation. Use bracket notation instead:
 
 {% raw %}
 
@@ -594,6 +539,12 @@ Use bracket notation if the workflow expression editor does not accept dot notat
 
 {% endraw %}
 
+### The notification reports only one model
+
+The query returns one row per model identifier, and `records[0]` reads only the first.
+
+If your spans record more than one identifier, either add a row for each result in the notification, or restrict the query to a single model with an additional filter.
+
 ### The estimated cost appears as zero
 
 Nova Micro costs are very low, and the workshop produces few tokens. The value may be rounded when displayed.
@@ -602,19 +553,11 @@ Inspect the raw `estimated_cost_usd` value or display more decimal places in the
 
 ---
 
-## 🎓 What You Have Learned
+## What You Have Learned
 
 <div class="persona-box developer" markdown="1">
 
-### 💻 Developer Takeaways
-
-You can now:
-
-1. Automate a DQL query for your AI service
-2. Monitor input and output token usage
-3. Trigger an action only after a threshold is exceeded
-4. Identify operations that consume the most tokens
-5. Use workflow execution details to troubleshoot automation
+**As a developer**, you can now automate a DQL query for your AI service, monitor input and output token usage, trigger an action only when a threshold is exceeded, identify which operations consume the most tokens, and use workflow execution details to troubleshoot the automation itself.
 
 **Practical use:** schedule lightweight checks that highlight unusual growth in prompt size, model output, or request volume.
 
@@ -622,16 +565,7 @@ You can now:
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE and Platform Takeaways
-
-You can now:
-
-1. Enrich telemetry with centrally maintained pricing data
-2. Calculate estimated model cost without hardcoding prices
-3. Configure conditional workflow execution
-4. Connect observability analysis to a notification action
-5. Test both positive and negative workflow paths
-6. Review workflow evidence before escalating an issue
+**As an SRE or platform engineer**, you can enrich telemetry with centrally maintained pricing data, calculate estimated cost without hardcoding prices, configure conditional execution, connect observability analysis to a notification action, and test both the positive and negative paths before relying on a workflow.
 
 **Practical use:** turn repeatable AI usage analysis into monitored operational processes.
 
@@ -639,7 +573,7 @@ You can now:
 
 ---
 
-## 🚀 Take It Further
+## Take It Further
 
 Ideas for extending the workshop workflow:
 
@@ -657,7 +591,7 @@ These examples require review and adaptation before production use.
 
 ---
 
-## 🎉 Lab Complete!
+## Lab Complete
 
 You have created a workflow that retrieves AI telemetry, enriches it with pricing data, evaluates a token threshold, and conditionally runs a notification.
 

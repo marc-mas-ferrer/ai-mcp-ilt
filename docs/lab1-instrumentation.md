@@ -4,17 +4,15 @@ title: Lab 1 - AI Instrumentation
 nav_order: 3
 ---
 
-# 🔬 Lab 1: Instrumenting an AI Application with OpenLLMetry
+# Lab 1: Instrumenting an AI Application with OpenLLMetry
 
 **Duration:** ~15 minutes
 
-In this lab, you will add OpenLLMetry instrumentation to the sample RAG application and send its traces to Dynatrace.
+In this lab, you will add OpenLLMetry instrumentation to the sample RAG application and send its AI traces to Dynatrace.
 
-The application already works. Your task is to make its AI workflow observable.
+The application already sends logs to Dynatrace and already creates spans for incoming HTTP requests. Both are configured in the repository. What is missing is the AI telemetry: prompts, completions, token usage, and the structure of the RAG pipeline. That is what you add here.
 
----
-
-## 🎯 Learning Objectives
+## Learning Objectives
 
 By the end of this lab, you will be able to:
 
@@ -24,37 +22,27 @@ By the end of this lab, you will be able to:
 - Generate traces from RAG and direct LLM requests
 - Verify that the application is exporting telemetry successfully
 
----
+## Step 1: Enable the OpenLLMetry Dependency
 
-## Step 1: Enable the OpenLLMetry Dependencies
+### 1.1 Edit requirements.txt
 
-The application dependencies already include the packages required to run the web application. The OpenLLMetry dependencies are commented out so that you can enable them during this lab.
-
-### 1.1 Open `requirements.txt`
-
-In the VS Code Explorer, open:
+In the VS Code Explorer, open `app/requirements.txt` and find this section:
 
 ```text
-app/requirements.txt
+# OpenLLMetry instrumentation
+# Attendees uncomment this dependency during Lab 1
+# traceloop-sdk==0.50.1
 ```
 
-Find these commented lines:
+Remove the `#` from the `traceloop-sdk` line only:
 
 ```text
-# traceloop-sdk==0.50.0
-# opentelemetry-exporter-otlp==1.39.0
-```
-
-Remove the `#` characters:
-
-```text
-traceloop-sdk==0.50.0
-opentelemetry-exporter-otlp==1.39.0
+traceloop-sdk==0.50.1
 ```
 
 Save the file.
 
-> ⚠️ Use the versions already specified in `requirements.txt`. Do not replace them with different versions during the workshop.
+> **Leave the other packages alone.** The OpenTelemetry packages above this section are already enabled, because they power the log export and HTTP spans that are running today. Do not comment them out, change their versions, or add extra OpenTelemetry packages. Use the version already written in the file.
 
 ### 1.2 Install the dependencies
 
@@ -64,7 +52,7 @@ From the repository root, run:
 pip install -r app/requirements.txt
 ```
 
-This installs the newly enabled packages while keeping the rest of the application dependencies consistent.
+This installs Traceloop while keeping the rest of the application dependencies consistent.
 
 ### 1.3 Verify the installation
 
@@ -80,17 +68,11 @@ Expected result:
 Traceloop is installed
 ```
 
----
-
 ## Step 2: Add Dynatrace Instrumentation
 
 ### 2.1 Open the application
 
-Open:
-
-```text
-app/main.py
-```
+Open `app/main.py`.
 
 ### 2.2 Find the instrumentation marker
 
@@ -98,12 +80,12 @@ Near the top of the file, find:
 
 ```python
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  🔬 LAB 1: INSTRUMENTATION SECTION                                      ║
-# ║                                                                         ║
-# ║  TODO: Add Dynatrace OpenLLMetry instrumentation here                   ║
-# ║  Follow the instructions in the workshop guide to add the               ║
-# ║  Traceloop initialization code below this comment block.                ║
-# ║                                                                         ║
+# ║  LAB 1: INSTRUMENTATION SECTION                                          ║
+# ║                                                                          ║
+# ║  TODO: Add Dynatrace OpenLLMetry instrumentation here                    ║
+# ║  Follow the instructions in the workshop guide to add the                ║
+# ║  Traceloop initialization code below this comment block.                 ║
+# ║                                                                          ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 # --> ADD YOUR INSTRUMENTATION CODE HERE <--
@@ -135,185 +117,48 @@ if DT_ENDPOINT and DT_API_TOKEN:
     headers = {
         "Authorization": f"Api-Token {DT_API_TOKEN}"
     }
-
     Traceloop.init(
         app_name=f"ai-chat-service-{ATTENDEE_ID}",
         api_endpoint=DT_ENDPOINT,
         headers=headers
     )
-
-    print("✅ Traceloop initialised")
+    print("Traceloop initialised")
     print(f"   Service: ai-chat-service-{ATTENDEE_ID}")
     print(f"   Endpoint: {DT_ENDPOINT}")
 else:
-    print("⚠️ Dynatrace configuration not found")
+    print("Dynatrace configuration not found")
     print("   Check DT_ENDPOINT and DT_API_TOKEN in .env")
 ```
 
 Save `app/main.py`.
 
-> ⚠️ Add this code directly below the instrumentation marker, after `load_dotenv()` has run. Do not add it at the very beginning of the file before the environment configuration is loaded.
+> **Position matters.** Add this code where the marker was, which is after `load_dotenv()` has run. Do not move it to the very top of the file, or the environment configuration will not be loaded yet.
 
----
+## Step 3: Understand What You Added
 
-## Step 3: Understand the Instrumentation
+Three things in that code are worth understanding before you continue.
 
-### 3.1 Import Traceloop
-
-```python
-from traceloop.sdk import Traceloop
-```
-
-Traceloop provides the OpenLLMetry instrumentation used by the workshop.
-
-It adds AI-specific telemetry to the OpenTelemetry traces produced by the application.
-
-### 3.2 Read the attendee and Dynatrace configuration
-
-```python
-ATTENDEE_ID = os.getenv("ATTENDEE_ID", "workshop-attendee")
-DT_ENDPOINT = os.getenv("DT_ENDPOINT")
-DT_API_TOKEN = os.getenv("DT_API_TOKEN")
-```
-
-These values come from the `.env` file configured in Lab 0.
-
-`ATTENDEE_ID` is used to give every attendee a unique service name:
+**The service name makes your telemetry findable.** `ATTENDEE_ID` comes from the `.env` file you configured in Lab 0, and it is used to build the service name:
 
 ```text
 ai-chat-service-{YOUR_ATTENDEE_ID}
 ```
 
-This allows multiple attendees to send data to the same Dynatrace environment while filtering their own telemetry.
+Every attendee sends data to the same Dynatrace environment, so this is how you filter for your own traces in Lab 2.
 
-### 3.3 Set metric temporality
-
-```python
-os.environ["OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"] = "delta"
-```
-
-This configures the preferred temporality for OpenTelemetry metrics exported by the instrumentation.
-
-It must be set before calling `Traceloop.init()`.
-
-### 3.4 Create the authentication header
-
-```python
-headers = {
-    "Authorization": f"Api-Token {DT_API_TOKEN}"
-}
-```
-
-The workshop uses a Dynatrace API token to authenticate OTLP ingestion.
-
-The header format must be:
+**The authentication header uses `Api-Token`, not `Bearer`.** Dynatrace OTLP ingestion expects:
 
 ```text
 Authorization: Api-Token dt0c01...
 ```
 
-Do not replace `Api-Token` with `Bearer`. The MCP platform token used in Lab 3 is a separate credential with a different purpose.
+Do not change this to `Bearer`. The MCP platform token you will use in Lab 3 is a different credential with a different scheme, and swapping them is a common cause of a 401.
 
-### 3.5 Initialise Traceloop
+**Metric temporality is set before initialisation.** The `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` line configures how exported metrics are reported, and it has to be set before `Traceloop.init()` runs.
 
-```python
-Traceloop.init(
-    app_name=f"ai-chat-service-{ATTENDEE_ID}",
-    api_endpoint=DT_ENDPOINT,
-    headers=headers
-)
-```
+## Step 4: Start the Instrumented Application
 
-| Parameter | Purpose |
-|---|---|
-| `app_name` | Defines the service name recorded in Dynatrace |
-| `api_endpoint` | Specifies the Dynatrace OTLP endpoint |
-| `headers` | Provides the API-token authentication header |
-
-The endpoint configured in `.env` must end with:
-
-```text
-/api/v2/otlp
-```
-
-### 3.6 Understand what is instrumented
-
-The application uses:
-
-- FastAPI for the HTTP service
-- LangChain to call the chat model
-- LiteLLM as the OpenAI-compatible gateway
-- Amazon Nova Micro as the language model
-- A local sentence-transformers model for embeddings
-- ChromaDB for vector retrieval
-- Traceloop workflow and task decorators for the RAG pipeline
-
-The local embedding model does not make a remote API request. Therefore, it does not create a hosted embedding-model span with token usage.
-
----
-
-## Step 4: Check the Updated File
-
-The beginning of `app/main.py` should now follow this structure:
-
-```python
-"""
-Dynatrace AI Observability Workshop
-"""
-
-import os
-import warnings
-from pathlib import Path
-from dotenv import load_dotenv
-
-# Load environment variables from the repository .env file
-env_path = Path(__file__).parent.parent / ".env"
-
-if env_path.exists():
-    load_dotenv(env_path)
-else:
-    load_dotenv()
-
-# ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  🔬 LAB 1: INSTRUMENTATION SECTION                                      ║
-# ╚══════════════════════════════════════════════════════════════════════════╝
-
-from traceloop.sdk import Traceloop
-
-ATTENDEE_ID = os.getenv("ATTENDEE_ID", "workshop-attendee")
-DT_ENDPOINT = os.getenv("DT_ENDPOINT")
-DT_API_TOKEN = os.getenv("DT_API_TOKEN")
-
-os.environ["OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE"] = "delta"
-
-if DT_ENDPOINT and DT_API_TOKEN:
-    headers = {
-        "Authorization": f"Api-Token {DT_API_TOKEN}"
-    }
-
-    Traceloop.init(
-        app_name=f"ai-chat-service-{ATTENDEE_ID}",
-        api_endpoint=DT_ENDPOINT,
-        headers=headers
-    )
-
-    print("✅ Traceloop initialised")
-    print(f"   Service: ai-chat-service-{ATTENDEE_ID}")
-    print(f"   Endpoint: {DT_ENDPOINT}")
-else:
-    print("⚠️ Dynatrace configuration not found")
-    print("   Check DT_ENDPOINT and DT_API_TOKEN in .env")
-
-# The existing application code continues below
-```
-
-You do not need to copy this complete example if you already added the code in Step 2. Use it to compare the structure of your file.
-
----
-
-## Step 5: Start the Instrumented Application
-
-### 5.1 Check the Python syntax
+### 4.1 Check the Python syntax
 
 Before starting the application, run:
 
@@ -323,308 +168,170 @@ python -m py_compile app/main.py
 
 No output means that the Python syntax is valid.
 
-### 5.2 Start the application
-
-Run:
+### 4.2 Start the application
 
 ```bash
 python app/main.py
 ```
 
-### 5.3 Check the startup output
+### 4.3 Check the startup output
 
-Expected output includes:
+The new line to look for is:
 
 ```text
-✅ Traceloop initialised
+Traceloop initialised
    Service: ai-chat-service-{YOUR_ATTENDEE_ID}
    Endpoint: https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
 ```
 
-You should also see:
-
-```text
-✅ RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
-INFO: Uvicorn running on http://0.0.0.0:8000
-```
+You should also still see the lines that were there in Lab 0, including the logging and FastAPI instrumentation messages, `RAG initialized successfully` and `Uvicorn running on http://0.0.0.0:8000`.
 
 Do not continue if the application reports:
 
 ```text
-⚠️ Dynatrace configuration not found
+Dynatrace configuration not found
 ```
 
-That message means `DT_ENDPOINT` or `DT_API_TOKEN` is missing.
+That message means `DT_ENDPOINT` or `DT_API_TOKEN` is missing from `.env`.
 
----
+## Step 5: Generate Trace Data
 
-## Step 6: Generate Trace Data
+### 5.1 Open the chat interface
 
-### 6.1 Open the chat interface
+The Codespace forwards port 8000 and opens the chat interface automatically. If the tab is no longer open, use the **Ports** tab and select the globe icon for port 8000.
 
-When VS Code detects port `8000`:
+### 5.2 Generate RAG traces
 
-1. Select **Open in Browser**.
-2. If the notification is no longer visible, open the **Ports** tab.
-3. Find port `8000`.
-4. Select the globe icon.
-
-### 6.2 Generate RAG traces
-
-Make sure **Use Knowledge Base (RAG)** is enabled.
-
-Send at least three questions:
+Make sure **Use Knowledge Base (RAG)** is enabled, and send at least three questions:
 
 ```text
 What is Dynatrace?
-```
-
-```text
 How does OpenTelemetry work with Dynatrace?
-```
-
-```text
 What is the Dynatrace MCP?
 ```
 
-Each RAG request performs:
+### 5.3 Generate a direct LLM trace
 
-1. An intent-classification LLM call
-2. Local embedding generation
-3. ChromaDB document retrieval
-4. Context generation
-5. A final LLM call using the retrieved context
-
-### 6.3 Generate a direct LLM trace
-
-Disable **Use Knowledge Base (RAG)**.
-
-Send:
+Disable **Use Knowledge Base (RAG)** and send:
 
 ```text
 Explain observability in one sentence.
 ```
 
-This creates a simpler request that calls the language model without retrieving knowledge-base context.
-
-### 6.4 Compare the two modes
+### 5.4 Compare the two modes
 
 | RAG enabled | RAG disabled |
 |---|---|
-| Classifies the question | Sends the question directly |
-| Generates an embedding locally | No retrieval embedding |
+| Classifies the question first | Sends the question directly |
+| Vectorises the query locally | No retrieval step |
 | Searches ChromaDB | No vector search |
-| Adds retrieved context | No retrieved context |
-| Makes two LLM calls | Makes one LLM call |
-| Returns knowledge-base sources | Returns no knowledge-base sources |
+| Adds retrieved context to the prompt | No retrieved context |
+| Makes two model calls | Makes one model call |
+| Returns knowledge-base sources | Returns no sources |
 
-Generating both types of traffic will make the differences easier to identify in Lab 2.
+Generating both kinds of traffic now will make the differences easier to identify in Lab 2.
 
----
+> **You will not see an embedding-model span.** Retrieval vectors are generated in-process by a local hashing function, so there is no call to a hosted embedding service and no embedding token cost. You will still see the `retrieve_documents` task and the ChromaDB query around it.
 
-## Step 7: Understand What Gets Traced
+> **Tip:** Automatic span names and attributes can vary between instrumentation versions. In Lab 2, identify spans by their position and purpose rather than by one exact name.
 
-### RAG request
-
-A RAG request should contain telemetry for:
-
-- **HTTP request:** The incoming FastAPI `/chat` request
-- **RAG workflow:** The complete `rag_chat_pipeline` operation
-- **Intent analysis:** The short LLM classification call
-- **Document retrieval:** The `retrieve_documents` task
-- **Vector search:** The ChromaDB query
-- **Context generation:** Formatting the retrieved documents
-- **Response generation:** The final LLM call through LiteLLM and Amazon Bedrock
-- **Token usage:** Input and output token attributes on the LLM calls
-
-### Direct request
-
-A request with RAG disabled should contain:
-
-- **HTTP request:** The incoming FastAPI `/chat` request
-- **LLM completion:** A direct model call through LiteLLM and Amazon Bedrock
-- **Token usage:** Input and output token attributes when captured by the instrumentation
-
-### Local embedding generation
-
-The embedding model runs locally inside the Codespace.
-
-You should not expect:
-
-- A remote embedding API call
-- Bedrock embedding-token costs
-- A remote `openai.embeddings` span
-
-You can still observe the surrounding `retrieve_documents.task` and the ChromaDB vector-search operation.
-
-> 💡 Exact automatic span names and available attributes can vary between instrumentation versions. In Lab 2, identify spans by their position and purpose rather than relying only on one exact span name.
-
----
-
-## Step 8: Check for Export Errors
+## Step 6: Check for Export Errors
 
 Review the terminal after generating the requests.
 
-The application may not print a success message for every exported batch. The important check is that no repeated exporter errors appear.
-
-Look for messages containing:
-
-```text
-401
-403
-404
-OTLP
-export
-```
+The application does not print a success message for every exported batch, so the useful check is the absence of repeated errors. Look for messages containing `401`, `403`, `404`, `OTLP` or `export`.
 
 If no export errors appear, continue to the checkpoint.
 
----
-
-## ✅ Checkpoint
+## Checkpoint
 
 Before proceeding to Lab 2, verify that:
 
-- [ ] `traceloop-sdk==0.50.0` is enabled in `requirements.txt`
-- [ ] `opentelemetry-exporter-otlp==1.39.0` is enabled in `requirements.txt`
-- [ ] `pip install -r app/requirements.txt` completes successfully
-- [ ] The instrumentation code is present in `app/main.py`
-- [ ] `python -m py_compile app/main.py` produces no errors
-- [ ] The application prints `✅ Traceloop initialised`
-- [ ] The service name contains your attendee ID
-- [ ] You generated at least three RAG requests
-- [ ] You generated at least one request with RAG disabled
-- [ ] No repeated OTLP export errors appear in the terminal
+- `traceloop-sdk==0.50.1` is enabled in `app/requirements.txt`, and the OpenTelemetry packages were left untouched
+- `pip install -r app/requirements.txt` completed successfully
+- The instrumentation code is in `app/main.py` and `python -m py_compile app/main.py` reports no errors
+- The application prints `Traceloop initialised` with your attendee ID in the service name
+- You generated at least three RAG requests and one request with RAG disabled
+- No repeated OTLP export errors appear in the terminal
 
----
+## Troubleshooting
 
-## 🆘 Troubleshooting
-
-### `ModuleNotFoundError: No module named 'traceloop'`
+### ModuleNotFoundError: No module named 'traceloop'
 
 Confirm that the package is enabled in `app/requirements.txt`:
 
 ```text
-traceloop-sdk==0.50.0
+traceloop-sdk==0.50.1
 ```
 
-Then run:
-
-```bash
-pip install -r app/requirements.txt
-```
-
-Verify:
+Then run `pip install -r app/requirements.txt` and verify with:
 
 ```bash
 python -c "from traceloop.sdk import Traceloop; print('Traceloop is installed')"
 ```
 
-### `Dynatrace configuration not found`
+### Dependency conflicts after installing
+
+If pip reports conflicting OpenTelemetry versions, the pinned packages in `requirements.txt` were probably edited or duplicated. Restore the file so that only the `traceloop-sdk` line was uncommented, then reinstall.
+
+### Dynatrace configuration not found
 
 Open `.env` and confirm that both fields contain values:
 
-```bash
+```text
 DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
-DT_API_TOKEN=dt0c01.INSTRUCTOR_PROVIDED_VALUE
+DT_API_TOKEN=dt0c01....
 ```
 
 Then stop and restart the application.
 
-### `401 Unauthorized`
+### 401 Unauthorized
 
 Check:
 
-1. The value of `DT_API_TOKEN`
-2. That the token has the `openTelemetryTrace.ingest` permission
-3. That no spaces or quotation marks surround the token
-4. That the header uses `Api-Token`, not `Bearer`
+- The value of `DT_API_TOKEN`
+- That no spaces or quotation marks surround the token
+- That the header uses `Api-Token`, not `Bearer`
 
 Do not print or share the complete token in the workshop chat.
 
-### `403 Forbidden`
+### 403 Forbidden
 
-The token may be valid but missing the required ingestion permission.
+The token may be valid but missing the required ingestion permission. Ask the instructor to verify the token scopes.
 
-Ask the instructor to verify that the token includes:
+### 404 Not Found
 
-```text
-openTelemetryTrace.ingest
-```
-
-### `404 Not Found`
-
-Confirm that `DT_ENDPOINT` ends with:
-
-```text
-/api/v2/otlp
-```
-
-Do not add `/v1/traces` manually. The exporter constructs the signal-specific endpoint.
+Confirm that `DT_ENDPOINT` ends with `/api/v2/otlp`. Do not add `/v1/traces` manually, because the exporter builds the signal-specific path itself.
 
 ### The application crashes after adding the code
 
-Run:
+Run `python -m py_compile app/main.py` and check that:
 
-```bash
-python -m py_compile app/main.py
-```
-
-Check that:
-
-- The instrumentation code was inserted after `load_dotenv()`
+- The instrumentation code was inserted where the marker was, after `load_dotenv()`
 - Every opening parenthesis has a closing parenthesis
 - The `if` and `else` blocks use consistent indentation
 - The original application code was not deleted
 
 ### The application works but no traces appear
 
-1. Generate several new chat requests.
-2. Confirm that Traceloop initialised successfully.
-3. Check the terminal for exporter errors.
-4. Confirm that the service name contains the correct attendee ID.
-5. Expand the time range in Dynatrace.
-6. Wait briefly and refresh the Dynatrace view.
+- Generate several new chat requests.
+- Confirm that Traceloop initialised successfully.
+- Check the terminal for exporter errors.
+- Confirm that the service name contains the correct attendee ID.
+- Expand the time range in Dynatrace and refresh.
 
 ### RAG works but no embedding-model span appears
 
-This is expected.
+This is expected. The workshop generates retrieval vectors locally, using a deterministic hashing function rather than a trained embedding model, so nothing is sent to a hosted embedding endpoint.
 
-The workshop uses:
-
-```text
-sentence-transformers/all-MiniLM-L6-v2
-```
-
-The embedding model runs locally and does not call a hosted embedding endpoint.
-
-Look for:
-
-- `retrieve_documents.task`
-- The ChromaDB query span
-- The two remote chat-model calls
+Look instead for the `retrieve_documents` task, the ChromaDB query span, and the two chat-model calls.
 
 ### More traces appear than expected
 
-FastAPI instrumentation, LangChain instrumentation, Traceloop decorators, and model instrumentation can each create spans at different levels.
+FastAPI instrumentation, LangChain instrumentation and the Traceloop decorators can each create spans at different levels. In Lab 2, use the parent-child structure to distinguish HTTP spans, workflow spans, task spans, vector-store spans and LLM spans.
 
-In Lab 2, use the parent-child structure to distinguish:
-
-- HTTP spans
-- Workflow spans
-- Task spans
-- Vector-store spans
-- LLM spans
-
----
-
-## 🎉 Excellent Work!
+## Excellent Work
 
 You have instrumented the application and generated both RAG and direct LLM traces.
 
 In Lab 2, you will examine the trace hierarchy, inspect model calls, analyse token usage, and estimate model cost.
-
-<div class="lab-nav">
-  <a href="lab0-setup">← Lab 0: Setup</a>
-  <a href="lab2-explore-traces">Lab 2: Explore Traces →</a>
-</div>

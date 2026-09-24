@@ -4,7 +4,7 @@ title: Lab 3 - Dynatrace MCP
 nav_order: 5
 ---
 
-# 🤖 Lab 3: Investigating AI Services with Dynatrace MCP
+# Lab 3: Investigating AI Services with Dynatrace MCP
 
 **Duration:** ~30 minutes
 
@@ -14,7 +14,7 @@ Instead of switching between your code and the Dynatrace interface, you will ask
 
 ---
 
-## 🎯 Learning Objectives
+## Learning Objectives
 
 By the end of this lab, you will be able to:
 
@@ -47,7 +47,7 @@ This allows you to:
 
 <div class="why-dynatrace" markdown="1">
 
-## 🏆 Why Connect an AI Assistant to Dynatrace?
+## Why Connect an AI Assistant to Dynatrace?
 
 | Without Dynatrace MCP | With Dynatrace MCP |
 |---|---|
@@ -63,81 +63,31 @@ MCP does not replace observability expertise. It helps you retrieve and analyse 
 
 ---
 
-## Step 1: Verify the MCP Configuration
+## How the Connection Is Configured
 
-The Dynatrace MCP server is already defined in:
+Your Codespace is already set up. The file `.vscode/mcp.json` defines a server named `Dynatrace-MCP`, connected over SSE to the Dynatrace MCP gateway, and `configure.sh` inserted your platform token into its authorisation header during Lab 0.
 
-```text
-.vscode/mcp.json
-```
+> **That file now contains a live credential.** Do not commit it, share it, or paste its contents into Copilot Chat. The version tracked in the repository holds a placeholder, and only your local copy has the real token.
 
-The authentication token was configured when you ran:
-
-```bash
-bash .devcontainer/configure.sh
-```
-
-during Lab 0.
-
-### 1.1 Check the configuration file
-
-Open:
-
-```text
-.vscode/mcp.json
-```
-
-Confirm that it contains a server named:
-
-```text
-Dynatrace-MCP
-```
-
-The authorisation header should reference the environment variable rather than contain the token directly:
-
-```json
-"Authorization": "Bearer ${env:DT_MCP_BEARER_TOKEN}"
-```
-
-> ⚠️ Do not paste the platform token directly into `.vscode/mcp.json`. Do not share or commit the token.
-
-### 1.2 Validate the JSON
-
-Run:
-
-```bash
-python -m json.tool .vscode/mcp.json
-```
-
-The command should print the formatted JSON without an error.
-
-### 1.3 Reload VS Code
-
-If you changed `.env`, ran `configure.sh`, or edited `.vscode/mcp.json`:
-
-1. Press `Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows.
-2. Run **Developer: Reload Window**.
-3. Wait for VS Code to reload.
-
-The reload allows GitHub Copilot to read the updated MCP configuration and environment variable.
+You do not need to verify the file by hand. The next step confirms the connection by using it, and if anything is wrong, the troubleshooting section at the end of this lab covers it.
 
 ---
 
-## Step 2: Verify the Dynatrace MCP Connection
+## Step 1: Verify the Dynatrace MCP Connection
 
-### 2.1 Open GitHub Copilot Chat
+### 1.1 Open GitHub Copilot Chat
 
 Open GitHub Copilot Chat from the VS Code toolbar.
 
 If your Copilot interface provides an agent-mode selector, switch to **Agent** mode so that Copilot can use MCP tools.
 
-### 2.2 Check the available tools
+### 1.2 Check the available tools
 
 Open the Copilot tools picker and confirm that tools from `Dynatrace-MCP` are available and enabled.
 
 The exact tool names displayed can vary with the Dynatrace MCP version.
 
-### 2.3 Run a simple test
+### 1.3 Run a simple test
 
 Enter:
 
@@ -149,9 +99,9 @@ When Copilot requests permission to use a Dynatrace MCP tool, review the propose
 
 A successful response should contain data retrieved from the workshop environment.
 
-> If `@dynatrace` is recognised in your Copilot version, you may use it. If it is not recognised, use Agent mode and explicitly write “Use Dynatrace MCP”.
+> If `@dynatrace` is recognised in your Copilot version, you may use it. If it is not recognised, use Agent mode and explicitly write "Use Dynatrace MCP".
 
-### 2.4 Scope the investigation to your service
+### 1.4 Scope the investigation to your service
 
 Run:
 
@@ -166,13 +116,13 @@ The service name must exactly match the attendee ID configured in `.env`.
 
 ---
 
-## 🎭 Choose Your Investigation
+## Choose Your Investigation
 
 The next exercises examine the same service from two perspectives.
 
 <div class="persona-box developer" markdown="1">
 
-### 💻 Developer: Investigate a RAG request from the IDE
+### Developer: Investigate a RAG request from the IDE
 
 Your goal is to understand:
 
@@ -181,13 +131,13 @@ Your goal is to understand:
 - How token use differs between LLM calls
 - What evidence is available when an error occurs
 
-**Focus on:** Steps 3 and 4.
+**Focus on:** Steps 2 and 3.
 
 </div>
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE or Platform Engineer: Triage service behaviour
+### SRE or Platform Engineer: Triage service behaviour
 
 Your goal is to determine:
 
@@ -197,7 +147,7 @@ Your goal is to determine:
 - Which simulated errors occurred
 - How to summarise the evidence for another team
 
-**Focus on:** Steps 5 and 6.
+**Focus on:** Steps 4 and 5.
 
 </div>
 
@@ -205,9 +155,9 @@ Your goal is to determine:
 
 <div class="persona-box developer" markdown="1">
 
-## 💻 Step 3: Investigate the RAG Pipeline
+## Step 2: Investigate the RAG Pipeline
 
-### 3.1 Find recent requests
+### 2.1 Find recent requests
 
 Enter:
 
@@ -232,7 +182,7 @@ Review whether the result includes operations associated with:
 
 Exact automatic span names can vary between instrumentation versions.
 
-### 3.2 Analyse token usage
+### 2.2 Analyse token usage
 
 Enter:
 
@@ -253,7 +203,7 @@ Show the DQL used.
 
 Compare the result with the token analysis performed in Lab 2.
 
-### 3.3 Find the slowest operations
+### 2.3 Find the slowest operations
 
 Enter:
 
@@ -275,7 +225,7 @@ Use the result to identify whether most of the observed time is associated with:
 
 > Parent and child spans can overlap. Do not add the durations of every span and treat the result as total request time.
 
-### 3.4 Compare RAG and direct requests
+### 2.4 Compare RAG and direct requests
 
 If you generated both request types in Lab 1, enter:
 
@@ -293,33 +243,34 @@ This investigation should show that a RAG request contains more processing stage
 
 ---
 
-## 💻 Step 4: Investigate Simulated Errors
+## Step 3: Investigate Simulated Errors
 
-### 4.1 Generate errors
+### 3.1 Generate errors
 
 Return to the AI Chat interface.
 
-1. Enable **🐛 Simulate Errors**.
-2. Send at least eight messages.
-3. Keep the toggle enabled until several failed requests appear.
-4. Disable the toggle when finished.
+1. Enable **Simulate Errors**.
+2. Send four or five messages.
+3. Disable the toggle when finished.
 
-The application selects simulated errors from several categories, including:
+Every request fails while the toggle is enabled, so a handful of messages is enough. The application picks one of the following scenarios at random each time:
 
 | Error code | Simulated condition |
 |---|---|
-| `EMB_NULL_VECTOR` | Local embedding generation returned an invalid vector |
-| `EMB_TOKEN_MISMATCH` | Embedding processing returned unexpected token information |
-| `CHROMA_COLLECTION_ERR` | ChromaDB collection or vector-store failure |
+| `EMB_NULL_VECTOR` | Local vectorisation returned a null vector |
+| `EMB_DIMENSION_MISMATCH` | Vector dimension mismatch, 384 expected and 0 received |
+| `CHROMA_COLLECTION_ERR` | ChromaDB collection not found or corrupted |
 | `LLM_MALFORMED_RESPONSE` | The LLM gateway returned a malformed response |
 | `CTX_WINDOW_EXCEEDED` | The request exceeded the simulated context limit |
-| `DOC_NO_MATCHES` | Document retrieval returned no relevant matches |
+| `DOC_NO_MATCHES` | Vector search returned no relevant documents |
 | `RAG_CHAIN_TIMEOUT` | The RAG pipeline exceeded the simulated timeout |
 | `CONTENT_FILTER_BLOCK` | The response was blocked by a simulated policy check |
 
+Because the scenario is chosen at random, you will not see every error code in your own data. Work with the ones that appear.
+
 These are intentionally generated workshop errors. They do not indicate a failure in Amazon Bedrock, LiteLLM, ChromaDB, or Dynatrace.
 
-### 4.2 Find the generated errors
+### 3.2 Find the generated errors
 
 Enter:
 
@@ -340,7 +291,7 @@ The application writes the following structured log attributes:
 - `error.simulated`
 - `attendee.id`
 
-### 4.3 Inspect the error details
+### 3.3 Inspect the error details
 
 Enter:
 
@@ -354,30 +305,30 @@ trace_id, and span_id when these fields are available.
 Sort the newest errors first.
 ```
 
-### 4.4 Investigate one error type
+### 3.4 Investigate one error type
 
-Choose an error code that appears in your data. For example:
+Choose an error code that actually appears in your data, then adapt this request:
 
 ```text
 Use Dynatrace MCP to investigate EMB_NULL_VECTOR errors from the last
 30 minutes for ai-chat-service-{YOUR_ATTENDEE_ID}.
 
 Show the matching log records and any trace context available.
-Explain what the application simulated, but do not claim that the real
-embedding model failed.
+Explain what the application simulated, but do not claim that real
+vectorisation failed.
 ```
 
 This final instruction matters because the workshop deliberately generates the error.
 
-### 4.5 Ask for a code-level recommendation
+### 3.5 Ask for a code-level recommendation
 
 Enter:
 
 ```text
 Review app/main.py and use the Dynatrace MCP evidence for the simulated
-EMB_NULL_VECTOR errors in ai-chat-service-{YOUR_ATTENDEE_ID}.
+errors in ai-chat-service-{YOUR_ATTENDEE_ID}.
 
-Suggest a small Python change that would handle an invalid embedding result
+Suggest a small Python change that would handle an invalid retrieval result
 gracefully. Separate:
 1. what the telemetry shows
 2. what the code currently does
@@ -394,9 +345,9 @@ Copilot can combine the local source code with evidence retrieved through Dynatr
 
 <div class="persona-box sre" markdown="1">
 
-## 🔧 Step 5: Assess Service Usage
+## Step 4: Assess Service Usage
 
-### 5.1 Summarise recent activity
+### 4.1 Summarise recent activity
 
 Enter:
 
@@ -414,7 +365,7 @@ Include:
 Show the DQL used.
 ```
 
-### 5.2 Analyse model usage
+### 4.2 Analyse model usage
 
 Enter:
 
@@ -431,19 +382,9 @@ Group the result by gen_ai.response.model and return:
 Show the DQL used.
 ```
 
-Depending on the instrumentation, the model may be recorded as:
+Depending on the instrumentation, the model may be recorded as `workshop-chat` or as `us.amazon.nova-micro-v1:0`.
 
-```text
-workshop-chat
-```
-
-or:
-
-```text
-us.amazon.nova-micro-v1:0
-```
-
-### 5.3 Identify unusual requests
+### 4.3 Identify unusual requests
 
 Enter:
 
@@ -460,18 +401,13 @@ This request separates observed data from interpretation.
 
 ---
 
-## 🔧 Step 6: Perform Error Triage
+## Step 5: Perform Error Triage
 
-### 6.1 Generate the incident data
+### 5.1 Generate the incident data
 
-If you have not already generated errors:
+If you have not already generated errors, open the chat interface, enable **Simulate Errors**, send four or five messages, then disable the toggle again.
 
-1. Open the chat interface.
-2. Enable **🐛 Simulate Errors**.
-3. Send at least ten messages.
-4. Disable the toggle.
-
-### 6.2 Create an error overview
+### 5.2 Create an error overview
 
 Enter:
 
@@ -489,7 +425,7 @@ Filter to error.simulated == "true" and return:
 Show the DQL used.
 ```
 
-### 6.3 Build an error timeline
+### 5.3 Build an error timeline
 
 Enter:
 
@@ -500,7 +436,7 @@ from the last 30 minutes for ai-chat-service-{YOUR_ATTENDEE_ID}.
 Break down the result by error.code and show the DQL used.
 ```
 
-### 6.4 Compare errors with requests
+### 5.4 Compare errors with requests
 
 Enter:
 
@@ -515,7 +451,7 @@ represent comparable requests and can be correlated reliably.
 
 This prevents an invalid error rate from being calculated using unrelated span and log counts.
 
-### 6.5 Prepare an investigation summary
+### 5.5 Prepare an investigation summary
 
 Enter:
 
@@ -535,7 +471,7 @@ State clearly that the errors were intentionally simulated for the workshop.
 Do not claim a production root cause.
 ```
 
-### 6.6 Generate a stakeholder update
+### 5.6 Generate a stakeholder update
 
 Enter:
 
@@ -582,122 +518,69 @@ Useful resources:
 
 ---
 
-## Step 7: MCP Investigation Practices
+## Step 6: MCP Investigation Practices
 
-### 7.1 Specify the data scope
+Three habits make MCP investigations more reliable.
 
-A useful request identifies:
-
-- The service
-- The time range
-- The required data source
-- The fields or calculations needed
-- The desired result format
-
-Less useful:
+**Scope every request.** A useful request names the service, the time range, the data source, and the fields or calculations you need. Compare:
 
 ```text
 How is my service doing?
 ```
 
-More useful:
+with:
 
 ```text
 Use Dynatrace MCP to calculate the P95 duration of /chat request spans from
 the last hour for ai-chat-service-{YOUR_ATTENDEE_ID}. Show the DQL used.
 ```
 
-### 7.2 Ask for the query
+**Always ask for the DQL.** Every prompt in this lab ends with `Show the DQL used.` for a reason. It lets you verify the filters, confirm the selected fields, reuse the query in Dynatrace, and spot assumptions the assistant made on your behalf.
 
-Add:
+**Separate evidence from interpretation.** Adding a line such as `Separate observed evidence from interpretation. State when the available telemetry is insufficient.` reduces unsupported conclusions, which matters most when you are about to share a summary with someone else.
 
-```text
-Show the DQL used.
-```
+### Refine iteratively
 
-This allows you to:
-
-- Verify the filters
-- Confirm the selected fields
-- Reuse the query in Dynatrace
-- Identify assumptions made by the assistant
-
-### 7.3 Require evidence-based answers
-
-For investigations, add:
-
-```text
-Separate observed evidence from interpretation. State when the available
-telemetry is insufficient.
-```
-
-This reduces unsupported conclusions.
-
-### 7.4 Refine the investigation iteratively
-
-Start with an overview:
+Start broad, then narrow:
 
 ```text
 Use Dynatrace MCP to summarise recent telemetry for
 ai-chat-service-{YOUR_ATTENDEE_ID}.
 ```
 
-Then narrow the investigation:
-
 ```text
 Which span names account for the highest average duration?
 ```
-
-Continue with a specific request:
 
 ```text
 Show the five slowest instances of the highest-latency span and include their
 trace IDs.
 ```
 
-Finally, request correlation:
-
 ```text
 For those trace IDs, identify related errors or logs when available.
 ```
 
-### 7.5 Combine telemetry with code carefully
+Each request builds on the previous answer, which is faster than writing one long query and easier to correct when a step goes wrong.
 
-You can ask Copilot to compare Dynatrace evidence with `app/main.py`:
-
-```text
-Review app/main.py and use Dynatrace MCP to investigate the slowest operation
-in ai-chat-service-{YOUR_ATTENDEE_ID}.
-
-Separate:
-- observations from telemetry
-- relevant code paths
-- recommended changes
-```
-
-Do not ask the assistant to modify the application automatically during the workshop. Review the recommendation first.
+> Do not ask the assistant to modify the application automatically during the workshop. Review any recommendation first.
 
 ---
 
-## ✅ Checkpoint
+## Checkpoint
 
 Before proceeding to Lab 4, verify that you can:
 
-- [ ] Find `Dynatrace-MCP` in the Copilot tool list
-- [ ] Run a Dynatrace MCP request from Agent mode
-- [ ] Retrieve telemetry for `ai-chat-service-{YOUR_ATTENDEE_ID}`
-- [ ] Ask for and review the generated DQL
-- [ ] Analyse input and output token usage
-- [ ] Identify high-latency operations
-- [ ] Generate simulated errors
-- [ ] Query logs using `error.code` and `error.simulated`
-- [ ] Investigate one simulated error using logs and trace context
-- [ ] Produce an evidence-based technical summary
-- [ ] Distinguish observed evidence from suggested conclusions
+- Find `Dynatrace-MCP` in the Copilot tool list and run a request from Agent mode
+- Retrieve telemetry for `ai-chat-service-{YOUR_ATTENDEE_ID}`, then review the generated DQL
+- Analyse token usage and identify high-latency operations
+- Generate simulated errors and query them using `error.code` and `error.simulated`
+- Investigate one simulated error using logs and trace context
+- Produce an evidence-based summary that distinguishes observation from conclusion
 
 ---
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Dynatrace MCP does not appear in Copilot
 
@@ -718,11 +601,13 @@ else
 fi
 ```
 
-4. Run:
+4. Rerun the personalised configuration command from Lab 0:
 
 ```bash
-bash .devcontainer/configure.sh
+bash .devcontainer/configure.sh --attendee-id={YOUR_ATTENDEE_ID}
 ```
+
+The command fails if you omit the attendee ID.
 
 5. Run **Developer: Reload Window**.
 6. Open a new Copilot Chat session in Agent mode.
@@ -745,9 +630,10 @@ Confirm that:
 
 1. Lab 0's `configure.sh` completed successfully.
 2. The VS Code window was reloaded after configuration.
-3. `.vscode/mcp.json` references `${env:DT_MCP_BEARER_TOKEN}`.
+3. The `Authorization` header in `.vscode/mcp.json` contains a token beginning with `dt0s16.` rather than an unreplaced placeholder.
 4. The instructor-provided platform token has not expired or been replaced.
-5. The token has the permissions required by the workshop.
+
+If the header still contains a placeholder, rerun the personalised configuration command and reload the window.
 
 Do not paste the token into Copilot Chat or the terminal output.
 
@@ -769,15 +655,20 @@ ai-chat-service-{YOUR_ATTENDEE_ID}
 
 Confirm that:
 
-1. **Simulate Errors** was enabled.
-2. Several requests were sent while the toggle was enabled.
-3. The query uses logs rather than only spans.
-4. The query filters on the actual field names:
+1. **Simulate Errors** was enabled when you sent the messages.
+2. The query uses logs rather than only spans.
+3. The query filters on the actual field names:
    - `error.simulated`
    - `error.code`
    - `error.message`
    - `error.stage`
-5. The selected time range includes the generated errors.
+4. The selected time range includes the generated errors.
+
+### A specific error code returns nothing
+
+Each simulated failure is chosen at random from eight scenarios, so your data will usually contain only some of them.
+
+Run the summary query from Step 3.2 first to see which codes you actually generated, then investigate one of those.
 
 ### Copilot returns a generic answer without using Dynatrace
 
@@ -816,21 +707,11 @@ provider or infrastructure failure.
 
 ---
 
-## 🎓 What You Have Learned
+## What You Have Learned
 
 <div class="persona-box developer" markdown="1">
 
-### 💻 Developer Takeaways
-
-You can now:
-
-1. Query Dynatrace telemetry from VS Code
-2. Investigate a RAG request without manually switching tools
-3. Analyse workflow, vector-search, and LLM spans
-4. Examine token usage and latency
-5. Correlate simulated errors with available trace context
-6. Combine local code context with observability evidence
-7. Request DQL that can be reviewed and reused
+**As a developer**, you can now query Dynatrace telemetry from VS Code, follow a RAG request through its workflow, vector-search and LLM spans, examine token usage and latency, and correlate simulated errors with trace context, all without leaving the IDE. You can also combine local source code with observability evidence and ask for DQL you can review and reuse.
 
 **Your investigation workflow:** reproduce the behaviour, retrieve the evidence, inspect the relevant code, and only then propose a change.
 
@@ -838,17 +719,7 @@ You can now:
 
 <div class="persona-box sre" markdown="1">
 
-### 🔧 SRE and Platform Takeaways
-
-You can now:
-
-1. Scope MCP queries by service and time range
-2. Summarise token usage and model activity
-3. Identify operations with high latency
-4. Triage structured application errors
-5. Build an error timeline
-6. Prepare evidence-based technical and stakeholder summaries
-7. Avoid unsupported root-cause and impact claims
+**As an SRE or platform engineer**, you can scope MCP queries by service and time range, summarise token usage and model activity, identify high-latency operations, triage structured application errors, build an error timeline, and prepare both technical and stakeholder summaries without overstating what the data shows.
 
 **Your triage workflow:** establish the scope, retrieve the data, identify the pattern, correlate the evidence, and communicate only what the telemetry supports.
 
@@ -856,7 +727,7 @@ You can now:
 
 ---
 
-## 🚀 Next Step
+## Next Step
 
 In Lab 4, you will use DQL and Dynatrace Workflows to automate analysis and notification for the instrumented AI service.
 
