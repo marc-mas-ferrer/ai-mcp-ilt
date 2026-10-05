@@ -20,6 +20,10 @@ opentelemetry-sdk==1.44.0
 opentelemetry-exporter-otlp-proto-http==1.44.0
 opentelemetry-instrumentation-fastapi==0.65b0
 
+# wrapt 2.x renamed wrap_function_wrapper(module=...) to (target=...), which breaks
+# the OpenLLMetry LangChain instrumentor. Keep 1.x until the instrumentors catch up.
+wrapt>=1.17,<2
+
 # OpenLLMetry instrumentation
 # Attendees uncomment this dependency during Lab 1
 # traceloop-sdk==0.50.1

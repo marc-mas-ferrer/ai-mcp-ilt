@@ -1073,8 +1073,11 @@ if __name__ == "__main__":
     import uvicorn
     print(f"Starting AI Chat Service for attendee: {ATTENDEE_ID}")
     uvicorn.run(
-        "main:app",
+        app,  # pass the object, not "main:app", so the module is not imported twice
         host=APP_HOST,
         port=APP_PORT,
-        reload=True
+        # No auto-reload: it re-imports this module in extra processes, which
+        # initialises OpenTelemetry again and logs duplicate warnings.
+        # Stop (Ctrl+C) and restart the app after editing it.
+        reload=False
     )
