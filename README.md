@@ -76,13 +76,24 @@ A small Retrieval Augmented Generation service built with FastAPI, LangChain and
 
 ### Retrieval
 
-- The knowledge base is defined in code, in the `SAMPLE_DOCUMENTS` list in `app/main.py`.
-- Documents are split with `RecursiveCharacterTextSplitter` using a chunk size of 500 and an overlap of 50.
-- Vectors are produced by `LocalHashingEmbeddings`, a deterministic 384-dimension feature-hashing embedder. It combines word features, adjacent-word bigrams and character n-grams, hashes them with SHA-256 and applies L2 normalisation.
+- The knowledge base is a set of markdown files in `app/knowledge/`, one per topic (Dynatrace platform, OpenTelemetry, OpenLLMetry, AI observability, Grail and DQL, Dynatrace MCP, and this workshop app). Each file starts with a front-matter header (`title`, `topic`, `keywords`) and is divided into `##` sections.
+- Each section is indexed as one chunk, prefixed with its title and section name. A section is only split further if it exceeds 1,500 characters, so a block of related facts is never cut in half.
+- Vectors are produced by `LocalHashingEmbeddings`, a deterministic 384-dimension feature-hashing embedder. It combines word features, adjacent-word bigrams and character n-grams, hashes them with SHA-256 and applies L2 normalisation. Common question words are ignored, and identifiers such as `EMB_NULL_VECTOR` are also indexed by their parts.
 - Chunks are stored in an in-memory Chroma collection named `workshop_{ATTENDEE_ID}`.
-- Each RAG request retrieves the three most relevant chunks.
+- Retrieval finds the best-matching section, then returns the whole topic it belongs to, plus up to two closely related sections from other topics. If the question names a topic by one of its front-matter `keywords` (for example "openllmetry" or "mcp"), that topic is used.
+- A short "Your workshop environment" block (the attendee's service name, the chat model and a DQL query for their own traces) is added to every context.
 
 The local vectoriser is intentionally simple and dependency-free so the workshop runs identically for every attendee. A production RAG system would normally use a trained embedding model.
+
+### Extending the knowledge base
+
+Add or edit a markdown file in `app/knowledge/`, using the same front-matter header and `##` sections, then restart the app. Put the keywords that should select the topic in the `keywords:` line. To check retrieval without calling a model:
+
+```bash
+python app/eval_rag.py
+```
+
+It prints the sections retrieved for a fixed set of questions and fails if the facts a good answer needs are missing from the context. Add `--llm` (needs the `LLM_*` values in `.env`) to also ask the chat model each question three times, with RAG on and off, and flag invented names or a missing "In this workshop" section.
 
 ### Request flow
 
@@ -90,8 +101,8 @@ With **Use Knowledge Base (RAG)** enabled, a `/chat` request runs a workflow wit
 
 1. `analyze_query_intent` - a short LLM call that classifies the question
 2. `retrieve_documents` - local vectorisation plus a ChromaDB similarity search
-3. `generate_context` - formats the retrieved chunks
-4. `generate_response` - the main LLM call, using the retrieved context
+3. `generate_context` - formats the retrieved sections and adds the workshop environment block
+4. `generate_response` - the main LLM call; a static system prompt, with the retrieved reference material placed next to the question in the user message
 5. source summarisation for the response payload
 
 So one RAG request produces **two** chat-model calls. With RAG disabled, the request makes a single direct model call and skips retrieval.
@@ -115,7 +126,7 @@ Each simulated failure writes a structured error log with an error code and stag
 
 ### Chat UI
 
-`app/static/index.html` is a single self-contained page with inline styles and scripts. It reads service details from `/info`, posts to `/chat`, renders Markdown responses, highlights code blocks, shows retrieved sources when present, and aborts a request after two minutes. Fonts, Marked and Highlight.js are loaded from public CDNs, so the Codespace needs internet access.
+`app/static/index.html` is a single self-contained page with inline styles and scripts. It reads service details from `/info`, posts to `/chat`, renders Markdown responses, highlights code blocks, labels each answer ("Grounded in N workshop sources" for RAG, "General model knowledge" otherwise), shows retrieved sources when present, and aborts a request after two minutes. Fonts, Marked and Highlight.js are loaded from public CDNs, so the Codespace needs internet access.
 
 ---
 
@@ -186,7 +197,7 @@ Do not commit `.env`.
    python app/main.py
    ```
 
-   The service starts on port 8000 with reload enabled, and your service appears in Dynatrace as `ai-chat-service-{ATTENDEE_ID}`.
+   The service starts on port 8000. Auto-reload is disabled on purpose, because it initialises OpenTelemetry twice, so stop the app (Ctrl+C) and start it again after editing. Your service appears in Dynatrace as `ai-chat-service-{ATTENDEE_ID}`.
 
 If RAG initialisation fails at startup, the application stops with an error instead of serving degraded results.
 
@@ -240,6 +251,8 @@ Rotate the gateway key and the Dynatrace tokens after each session, and prefer a
   mcp.json              Dynatrace MCP server definition
 app/
   main.py               FastAPI service, RAG pipeline, local vectoriser
+  knowledge/            Markdown knowledge base used for retrieval
+  eval_rag.py           Retrieval check (offline) and RAG on/off check (--llm)
   requirements.txt      Dependencies, with traceloop-sdk commented out for Lab 1
   static/index.html     Self-contained chat UI
 docs/                   Published workshop guide
@@ -257,7 +270,9 @@ docs/                   Published workshop guide
 
 **MCP tools missing in Copilot.** Reload the VS Code window, check that `.vscode/mcp.json` is valid JSON, and confirm the token is present and unexpired.
 
-**Knowledge base looks empty after a restart.** The vector store is in memory. Anything added through `/documents` is lost when the process stops.
+**Knowledge base looks empty after a restart.** The vector store is in memory and is rebuilt from `app/knowledge/` on every start. Anything added through `/documents` is lost when the process stops.
+
+**An edit to a knowledge file has no effect.** The files are read at startup. Restart the app, since auto-reload is disabled.
 
 ---
 

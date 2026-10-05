@@ -28,10 +28,10 @@ cd docs && bundle install && bundle exec jekyll serve
 
 ```
 app/main.py          # FastAPI + LangChain RAG app (MAIN FILE attendees modify)
+app/knowledge/       # Markdown knowledge base (one file per topic, front-matter + ## sections)
+app/eval_rag.py      # Retrieval check: `python app/eval_rag.py` (offline), `--llm` for RAG on/off
 app/static/          # Chat UI (marked.js for markdown, highlight.js for code)
-secrets-server/      # Azure Function - distributes Azure OpenAI creds via token
 docs/                # Jekyll GitHub Pages - lab guides (lab0-lab4)
-solutions/           # Reference instrumented app (instructor use)
 .devcontainer/       # Codespace config (Python 3.11, Node 20)
 ```
 
@@ -40,18 +40,24 @@ solutions/           # Reference instrumented app (instructor use)
 ```
 @workflow: process_rag_chat()
   ├── @task: analyze_query_intent()   → LLM classifies query type
-  ├── @task: retrieve_documents()     → ChromaDB vector search
-  ├── @task: generate_context()       → Format docs into context string
-  └── @task: generate_response()      → LLM generates final answer
+  ├── @task: retrieve_documents()     → select_documents(): best section → whole topic (+ related)
+  ├── @task: generate_context()       → Format sections + workshop environment block
+  └── @task: generate_response()      → Static system prompt; context sits next to the question
 ```
+
+Retrieval uses `LocalHashingEmbeddings` (local, no embedding span). A topic named in the
+question via a front-matter `keywords:` entry wins over the best-matching section. After
+editing `app/knowledge/*.md` or the prompt, run `python app/eval_rag.py`. Keep
+`RAG_SYSTEM_PROMPT` above 1,024 tokens (prompt caching) and free of facts; facts belong in the
+knowledge files.
 
 ## Critical Configuration
 
 | Variable | Required Value | Notes |
 |----------|----------------|-------|
-| `AZURE_OPENAI_API_VERSION` | `2024-08-01-preview` | Other versions may return 404 |
+| `LLM_BASE_URL` | Must end with `/v1` | LiteLLM gateway |
+| `LLM_CHAT_MODEL` | `workshop-chat` | Routes to Amazon Nova Micro |
 | `DT_ENDPOINT` | Must end with `/api/v2/otlp` | Common mistake to omit suffix |
-| `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` | `dynatraceRAG` | Uses `text-embedding-3-large` |
 
 ## Code Patterns
 
@@ -121,16 +127,14 @@ Used in Lab 3 for practicing error investigation with Dynatrace MCP.
 | Issue | Cause | Fix |
 |-------|-------|-----|
 | Chat returns "Failed to send message" on long responses | Default fetch timeout | UI has 2-min AbortController timeout |
-| 404 from Azure OpenAI | Wrong API version | Use `2025-07-01-preview` |
-| Prompt caching not working | System prompt < 1024 tokens | `RAG_SYSTEM_PROMPT` is 1,200+ tokens |
+| Edits to `app/knowledge/` or `main.py` have no effect | Auto-reload is disabled | Stop and restart the app |
+| Prompt caching not working | System prompt < 1024 tokens | Keep `RAG_SYSTEM_PROMPT` above 1,024 tokens |
 | Deprecation warning on startup | `@app.on_event("startup")` | Use `lifespan` context manager |
 
 ## Protected Files
 
 Do not modify without good reason:
 - `.devcontainer/` — Tested Codespace config
-- `secrets-server/` — Production Azure Function
-- `solutions/` — Instructor reference implementation
 
 ## Key URLs
 
