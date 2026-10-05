@@ -65,16 +65,19 @@ On the GitHub Codespaces page:
 - Select **Create codespace**.
 - Wait for VS Code to open in your browser.
 - If VS Code asks whether to allow automatic tasks, select **Allow**.
-- Wait until the setup runs in the terminal at the bottom and finishes.
-- Do not close the terminal while Python dependencies are being installed.
+- The terminal at the bottom shows the setup progress. You can do something else while it runs, because the result stays on screen when it finishes.
 
 The setup script automatically creates a guided `.env` file in the repository root.
+
+> **Note:** A setup terminal may open briefly and close by itself. That is expected. The result is shown in the terminal that stays open, and in any new terminal you open until configuration is complete.
 
 > **Important:** Each attendee receives an isolated Codespace. Changes inside your Codespace do not modify the main workshop repository or another attendee's environment.
 
 ### 1.3 Confirm the setup completed
 
-When setup finishes, the terminal displays a green **SETUP COMPLETED SUCCESSFULLY** banner followed by the next step. If you see a red **SETUP FAILED** message instead, run `bash .devcontainer/setup.sh` again.
+When setup finishes, the terminal displays a green **SETUP COMPLETED SUCCESSFULLY** banner followed by the next step, and `.env` opens in the editor. If you see a red **SETUP FAILED** message instead, run `bash .devcontainer/setup.sh` again.
+
+If no terminal is visible, open one with **Terminal → New Terminal**. It shows the same result.
 
 Once you see the green banner, continue to Step 2. You will add the credentials to `.env` there.
 

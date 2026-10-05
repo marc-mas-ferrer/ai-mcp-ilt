@@ -4,7 +4,7 @@
     {
       "label": "Workshop setup",
       "type": "shell",
-      "command": "bash .devcontainer/setup.sh",
+      "command": "bash .devcontainer/welcome.sh",
       "runOptions": { "runOn": "folderOpen" },
       "presentation": {
         "reveal": "always",

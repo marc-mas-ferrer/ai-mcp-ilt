@@ -1,33 +1,38 @@
 #!/usr/bin/env bash
+# Workshop setup. Runs automatically as the Codespace postCreateCommand.
+#
+# The postCreateCommand terminal closes as soon as this finishes, so the
+# result is also recorded in ~/.workshop/ and displayed by welcome.sh in a
+# terminal that stays open (VS Code task + every new terminal).
 set -euo pipefail
 
-GREEN=$'\033[1;97;42m'
-RED=$'\033[1;97;41m'
-BOLD=$'\033[1m'
-RESET=$'\033[0m'
-
-trap 'echo ""; echo -e "${RED}  SETUP FAILED - see the error above. Re-run: bash .devcontainer/setup.sh  ${RESET}"; echo ""' ERR
-
-echo ""
-echo "=============================================================="
-echo " Dynatrace AI Observability Workshop"
-echo " Setting up your Codespace"
-echo "=============================================================="
-echo ""
-
-REPO_DIR="$(git rev-parse --show-toplevel)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$REPO_DIR/.env"
+STATE_DIR="$HOME/.workshop"
+STATUS_FILE="$STATE_DIR/setup.status"
+LOG_FILE="$STATE_DIR/setup.log"
 
-echo "Repository: $REPO_DIR"
-echo ""
-echo "Installing Python dependencies..."
-python -m pip install --upgrade pip
-python -m pip install -r "$REPO_DIR/app/requirements.txt"
-echo "Python dependencies installed."
-
-if [ ! -f "$ENV_FILE" ]; then
+# ---------------------------------------------------------------------------
+# Steps (run in a child process so 'set -e' applies to every command)
+# ---------------------------------------------------------------------------
+if [ "${1:-}" = "--steps" ]; then
   echo ""
-  echo "Creating the guided .env configuration file..."
+  echo "=============================================================="
+  echo " Dynatrace AI Observability Workshop"
+  echo " Setting up your Codespace"
+  echo "=============================================================="
+  echo ""
+  echo "Repository: $REPO_DIR"
+  echo ""
+  echo "Installing Python dependencies..."
+  python -m pip install --upgrade pip
+  python -m pip install -r "$REPO_DIR/app/requirements.txt"
+  echo "Python dependencies installed."
+
+  if [ ! -f "$ENV_FILE" ]; then
+    echo ""
+    echo "Creating the guided .env configuration file..."
 
     cat > "$ENV_FILE" <<'ENVEOF'
 # =====================================================================
@@ -56,35 +61,40 @@ DT_MCP_BEARER_TOKEN=PASTE_HERE
 # --------------------------- END OF BLOCK -----------------------------
 ENVEOF
 
-
-  echo "Created: $ENV_FILE"
-else
-  echo ""
-  echo ".env already exists. Existing values were preserved."
+    echo "Created: $ENV_FILE"
+  else
+    echo ""
+    echo ".env already exists. Existing values were preserved."
+  fi
+  exit 0
 fi
 
-echo ""
-echo -e "${GREEN}${BOLD}"
-echo "##############################################################"
-echo "#                                                            #"
-echo "#              SETUP COMPLETED SUCCESSFULLY                  #"
-echo "#                                                            #"
-echo "##############################################################"
-echo -e "${RESET}"
-echo -e "${BOLD}NEXT STEP: Lab 0, Step 2 - Add the shared workshop credentials${RESET}"
-echo ""
-echo "  1. Open .env in the VS Code Explorer (repository root)."
-echo "  2. Replace the block between the PASTE markers with the"
-echo "     instructor credential block, then save the file."
-echo "  3. Copy the personalised configure command from Lab 0, Step 3."
-echo "     It looks like:"
-echo ""
-echo "       bash .devcontainer/configure.sh --attendee-id=acme-alex"
-echo ""
-echo "  Do not run the application until configure.sh succeeds."
-echo ""
+# ---------------------------------------------------------------------------
+# Runner
+# ---------------------------------------------------------------------------
+mkdir -p "$STATE_DIR"
+echo "running $$" > "$STATUS_FILE"
+: > "$LOG_FILE"
 
-# Open .env for the attendee when the 'code' CLI is available
-if command -v code >/dev/null 2>&1; then
-  code "$ENV_FILE" >/dev/null 2>&1 || true
+# Show the welcome message in every new interactive terminal until the
+# attendee has finished configure.sh (welcome.sh stays silent after that).
+BASHRC="$HOME/.bashrc"
+if ! grep -q '>>> workshop welcome >>>' "$BASHRC" 2>/dev/null; then
+  cat >> "$BASHRC" <<RCEOF
+
+# >>> workshop welcome >>>
+if [[ \$- == *i* ]] && [ -f "$SCRIPT_DIR/welcome.sh" ]; then
+  bash "$SCRIPT_DIR/welcome.sh" --quiet-when-configured
+fi
+# <<< workshop welcome <<<
+RCEOF
+fi
+
+if bash "$SCRIPT_DIR/setup.sh" --steps 2>&1 | tee -a "$LOG_FILE"; then
+  echo "success" > "$STATUS_FILE"
+  bash "$SCRIPT_DIR/welcome.sh"
+else
+  echo "failed" > "$STATUS_FILE"
+  bash "$SCRIPT_DIR/welcome.sh"
+  exit 1
 fi
