@@ -30,6 +30,7 @@
       }
     }
   },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": {
