@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+GREEN=$'\033[1;97;42m'
+RED=$'\033[1;97;41m'
+BOLD=$'\033[1m'
+RESET=$'\033[0m'
+
+trap 'echo ""; echo -e "${RED}  SETUP FAILED - see the error above. Re-run: bash .devcontainer/setup.sh  ${RESET}"; echo ""' ERR
+
 echo ""
 echo "=============================================================="
 echo " Dynatrace AI Observability Workshop"
@@ -57,26 +64,27 @@ else
 fi
 
 echo ""
-echo "=============================================================="
-echo " ACTION REQUIRED"
-echo "=============================================================="
+echo -e "${GREEN}${BOLD}"
+echo "##############################################################"
+echo "#                                                            #"
+echo "#              SETUP COMPLETED SUCCESSFULLY                  #"
+echo "#                                                            #"
+echo "##############################################################"
+echo -e "${RESET}"
+echo -e "${BOLD}NEXT STEP: Lab 0, Step 2 - Add the shared workshop credentials${RESET}"
 echo ""
-echo "1. In the guide sidebar, set your recognisable Workshop ID."
+echo "  1. Open .env in the VS Code Explorer (repository root)."
+echo "  2. Replace the block between the PASTE markers with the"
+echo "     instructor credential block, then save the file."
+echo "  3. Copy the personalised configure command from Lab 0, Step 3."
+echo "     It looks like:"
 echo ""
-echo "2. Open .env in the VS Code Explorer."
+echo "       bash .devcontainer/configure.sh --attendee-id=acme-alex"
 echo ""
-echo "3. Replace the block between the PASTE markers with the"
-echo "   instructor credential block."
+echo "  Do not run the application until configure.sh succeeds."
 echo ""
-echo "4. Save .env."
-echo ""
-echo "5. Return to Lab 0 and copy its personalised configure command."
-echo "   It will look like:"
-echo ""
-echo "   bash .devcontainer/configure.sh --attendee-id=acme-alex"
-echo ""
-echo "6. Run that command in this terminal."
-echo ""
-echo "Do not run the application until configure.sh succeeds."
-echo "=============================================================="
-echo ""
+
+# Open .env for the attendee when the 'code' CLI is available
+if command -v code >/dev/null 2>&1; then
+  code "$ENV_FILE" >/dev/null 2>&1 || true
+fi

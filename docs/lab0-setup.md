@@ -64,21 +64,19 @@ On the GitHub Codespaces page:
 - Keep the default repository configuration.
 - Select **Create codespace**.
 - Wait for VS Code to open in your browser.
-- Wait until the automatic setup process in the terminal finishes.
+- If VS Code asks whether to allow automatic tasks, select **Allow**.
+- Wait until the setup runs in the terminal at the bottom and finishes.
 - Do not close the terminal while Python dependencies are being installed.
 
 The setup script automatically creates a guided `.env` file in the repository root.
 
 > **Important:** Each attendee receives an isolated Codespace. Changes inside your Codespace do not modify the main workshop repository or another attendee's environment.
 
-### 1.3 Check the setup result
+### 1.3 Confirm the setup completed
 
-At the end of setup, the terminal should display an **ACTION REQUIRED** section telling you to:
+When setup finishes, the terminal displays a green **SETUP COMPLETED SUCCESSFULLY** banner followed by the next step. If you see a red **SETUP FAILED** message instead, run `bash .devcontainer/setup.sh` again.
 
-- Open `.env`.
-- Replace the block between the PASTE markers with the instructor credential block.
-- Save the file.
-- Run the personalised configuration command shown later in this lab.
+Once you see the green banner, continue to Step 2. You will add the credentials to `.env` there.
 
 ---
 
