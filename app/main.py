@@ -232,91 +232,85 @@ class HealthResponse(BaseModel):
     service_name: str
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Knowledge Base - Sample Documents about Dynatrace
+# Knowledge Base - Markdown files in app/knowledge/
 # ═══════════════════════════════════════════════════════════════════════════
 
-SAMPLE_DOCUMENTS = [
-    """
-    Dynatrace is an AI-powered, full-stack observability platform that provides
-    automatic and intelligent monitoring for cloud-native and enterprise
-    environments. It uses Dynatrace Intelligence to automatically detect anomalies, identify
-    root causes, and provide precise answers about application performance
-    issues.
-    """,
-    """
-    Dynatrace OneAgent is a single agent that automatically discovers and
-    monitors all processes, services, and infrastructure in your environment.
-    It requires no manual configuration and provides full-stack visibility from
-    the application layer down to the infrastructure.
-    """,
-    """
-    OpenTelemetry is an open-source observability framework that provides APIs,
-    libraries, and tools for collecting telemetry data. Dynatrace fully supports
-    OpenTelemetry and can ingest traces, metrics, and logs via the OTLP
-    protocol.
-    """,
-    """
-    Grail is the Dynatrace data lakehouse. It stores logs, traces, metrics,
-    events and business events together in one place, with no indexes and no
-    schema defined up front, so data keeps its full context and can be queried
-    as it was ingested. Grail is the storage layer that DQL queries read from,
-    and it also holds lookup tables that queries can join against.
-    """,
-    """
-    DQL, the Dynatrace Query Language, queries data stored in Grail. A query
-    names a data source, then pipes records through commands. Example:
-    fetch logs
-    | filter loglevel == "ERROR"
-    | summarize error_count = count(), by:{host.name}
-    | sort error_count desc
-    | limit 10
-    Read it top to bottom: fetch logs, keep error records, count per host,
-    sort, return ten rows.
-    """,
-     """
-    Common DQL commands are fetch to choose a data source such as logs, spans,
-    events or metrics; filter to keep matching records; fields and fieldsAdd to
-    select or calculate columns; summarize to aggregate with functions like
-    count, sum, avg and max; sort and limit to order and trim the result;
-    lookup to enrich records from a lookup table; and makeTimeseries to turn
-    records into a time series for charting. They combine like this:
-    fetch logs | filter loglevel == "ERROR" | summarize count(), by:{host.name}
-    """,
-    """
-    In DQL, comparison uses a double equals sign and string values are written
-    in double quotes, for example filter service.name == "checkout". Aggregates
-    in summarize are given a name, as in total_tokens = sum(gen_ai.usage
-    .input_tokens). Grouping is written as by:{field}. Field
-    names that contain dots are written as-is and do not need quoting.
-    """,
-    """
-    Dynatrace Application Security provides runtime vulnerability detection and
-    protection. It automatically identifies vulnerabilities in your running
-    applications without requiring code changes or additional agents.
-    """,
-    """
-    OpenLLMetry is an open-source project built on OpenTelemetry for monitoring
-    LLM applications. It provides automatic instrumentation for popular AI
-    frameworks such as OpenAI, LangChain and vector stores, capturing prompts,
-    completions, token usage and latency as spans, which makes AI workloads
-    observable in the same way as any other service.
-    """,
-    """
-    In AI observability, token usage is recorded on LLM spans using the
-    OpenTelemetry GenAI semantic conventions. The attributes
-    gen_ai.usage.input_tokens and gen_ai.usage.output_tokens hold the token
-    counts, and gen_ai.response.model records which model answered. Because
-    models are billed per million tokens, those attributes are what cost and
-    capacity analysis is built on.
-    """,
-    """
-    The Dynatrace MCP server implements the Model Context Protocol, which lets
-    an AI assistant work with external tools and data. It allows assistants
-    such as GitHub Copilot to query Dynatrace data, generate DQL, investigate
-    problems and analyse telemetry directly from the IDE, limited by the
-    permissions on the platform token it was given.
-    """,
-]
+KNOWLEDGE_DIR = Path(__file__).parent / "knowledge"
+
+# Each chunk is indexed with its title and section as a prefix, so a chunk
+# about "Traceloop.init" still matches a query that only says "OpenLLMetry".
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 100
+
+
+def _parse_front_matter(raw: str) -> tuple[dict, str]:
+    """Split a simple '---' delimited key: value header from the body."""
+    if not raw.startswith("---"):
+        return {}, raw
+    _, header, body = raw.split("---", 2)
+    meta = {}
+    for line in header.strip().splitlines():
+        key, _, value = line.partition(":")
+        meta[key.strip()] = value.strip()
+    return meta, body.strip()
+
+
+def split_into_chunks(body: str, title: str, topic: str, source: str) -> list:
+    """Split one markdown body by '##' section, then by size, tagging each chunk."""
+    from langchain_core.documents import Document
+    from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+    sections = MarkdownHeaderTextSplitter(
+        headers_to_split_on=[("##", "section")]
+    ).split_text(body)
+    size_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP
+    )
+
+    chunks = []
+    for section_doc in sections:
+        section = section_doc.metadata.get("section", "Overview")
+        for text in size_splitter.split_text(section_doc.page_content):
+            chunks.append(Document(
+                page_content=f"{title} - {section}\n{text}",
+                metadata={
+                    "source": source,
+                    "title": title,
+                    "topic": topic,
+                    "section": section,
+                },
+            ))
+    return chunks
+
+
+def load_knowledge_base(directory: Path = KNOWLEDGE_DIR) -> tuple[list, int]:
+    """Load every markdown file in the knowledge directory as tagged chunks."""
+    files = sorted(directory.glob("*.md"))
+    chunks = []
+    for path in files:
+        meta, body = _parse_front_matter(path.read_text(encoding="utf-8"))
+        chunks.extend(split_into_chunks(
+            body,
+            title=meta.get("title", path.stem),
+            topic=meta.get("topic", path.stem),
+            source=path.name,
+        ))
+    return chunks, len(files)
+
+
+# Number of knowledge files loaded, reported by /info.
+KNOWLEDGE_FILE_COUNT = len(list(KNOWLEDGE_DIR.glob("*.md")))
+
+
+# Question filler that appears in nearly every query and says nothing about the
+# topic. Without this, "what is dynatrace" matches on "what" and "is" as strongly
+# as on "dynatrace".
+STOPWORDS = frozenset("""
+a an and are as at be by can could do does for from how i if in into is it its
+me my of on or please should tell that the their there this to us was we what
+when where which who why will with would you your about explain describe give
+""".split())
 
 
 class LocalHashingEmbeddings(Embeddings):
@@ -383,11 +377,25 @@ class LocalHashingEmbeddings(Embeddings):
         if not normalised:
             return vector
 
-        words = self._word_features(normalised)
+        # Stopwords are dropped from word and bigram features only; the
+        # character n-grams below still see the full text.
+        words = [
+            word for word in self._word_features(normalised)
+            if word not in STOPWORDS
+        ]
 
         # Whole words carry most of the retrieval signal.
         for word in words:
             self._add_feature(vector, f"word:{word}", weight=2.0)
+
+        # Identifiers such as EMB_NULL_VECTOR or gen_ai.usage.input_tokens are
+        # also indexed by their parts, so "null vector" or "input tokens" match.
+        for word in words:
+            parts = re.split(r"[_.-]", word)
+            if len(parts) > 1:
+                for part in parts:
+                    if part and part not in STOPWORDS:
+                        self._add_feature(vector, f"word:{part}", weight=1.0)
 
         # Adjacent word pairs preserve some local phrase information.
         for index in range(len(words) - 1):
@@ -425,8 +433,12 @@ retriever = None
 llm = None
 
 def format_docs(docs):
-    """Format retrieved documents into a single string"""
-    return "\n\n---\n\n".join(doc.page_content.strip() for doc in docs)
+    """Format retrieved documents into a single string, labelled by source"""
+    return "\n\n---\n\n".join(
+        f"[Source: {doc.metadata.get('title', 'Knowledge base')}"
+        f" - {doc.metadata.get('section', 'Overview')}]\n{doc.page_content.strip()}"
+        for doc in docs
+    )
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Error Simulation for Workshop Demos
@@ -728,10 +740,12 @@ When answering questions, follow these principles:
 ## Context from Knowledge Base
 {context}
 
-Answer using only the context provided above.
-
-If the context does not contain what is needed, say so plainly and state what is
-missing. Do not fill the gap from prior knowledge.
+Use the context above as your primary and authoritative source. Where it
+covers the question, answer from it and prefer it over general knowledge if the
+two differ. You may add general background to make an answer clearer, but do not
+invent Dynatrace-specific product facts, endpoints, token scopes or configuration
+that are not in the context. If the context does not contain what is needed for a
+Dynatrace-specific detail, say so plainly and state what is missing.
 
 When the question concerns DQL, reproduce the syntax exactly as it appears in the
 context. Do not introduce command words, punctuation or brackets that do not
@@ -763,11 +777,17 @@ def generate_response(question: str, context: str) -> str:
 
 def summarize_sources(docs: list) -> list:
     """
-    Step 4: Extract and summarize source snippets
+    Step 4: List the knowledge-base sections that were retrieved
     """
-    if not docs:
-        return []
-    return [doc.page_content[:100] + "..." for doc in docs]
+    sources = []
+    for doc in docs or []:
+        label = (
+            f"{doc.metadata.get('title', 'Knowledge base')}"
+            f" - {doc.metadata.get('section', 'Overview')}"
+        )
+        if label not in sources:
+            sources.append(label)
+    return sources
 
 @task(name="analyze_query_intent")
 def analyze_query_intent(query: str) -> dict:
@@ -814,13 +834,10 @@ def initialize_rag():
         # This makes no network calls and downloads no external model.
         embeddings = LocalHashingEmbeddings(dimensions=384)
 
-        # Split the sample documents into smaller chunks.
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50
-        )
-
-        docs = text_splitter.create_documents(SAMPLE_DOCUMENTS)
+        # Load the markdown knowledge base as section-tagged chunks.
+        docs, file_count = load_knowledge_base()
+        if not docs:
+            raise ValueError(f"No knowledge base content found in {KNOWLEDGE_DIR}")
 
         # Create an in-memory vector store using the same local vectoriser
         # for the workshop documents and subsequent attendee questions.
@@ -830,9 +847,12 @@ def initialize_rag():
             collection_name=f"workshop_{ATTENDEE_ID}"
         )
 
-        # Retrieve the three most relevant chunks for each RAG request.
+        # MMR fetches a wider candidate set, then keeps four chunks that are
+        # relevant but not near-duplicates, so a broad question such as
+        # "What is Dynatrace?" gets several different sections.
         retriever = vectorstore.as_retriever(
-            search_kwargs={"k": 5}
+            search_type="mmr",
+            search_kwargs={"k": 4, "fetch_k": 12, "lambda_mult": 0.6}
         )
 
         # Initialise the OpenAI-compatible LiteLLM chat client.
@@ -866,7 +886,7 @@ def initialize_rag():
                 "attendee_id": ATTENDEE_ID,
                 "embedding_model": "local-hashing-384",
                 "chat_model": LLM_CHAT_MODEL,
-                "document_count": len(SAMPLE_DOCUMENTS),
+                "document_count": file_count,
                 "document_chunks": len(docs)
             }
         )
@@ -876,6 +896,7 @@ def initialize_rag():
             f"{ATTENDEE_ID}"
         )
         print("   Vectoriser: local-hashing-384")
+        print(f"   Knowledge files: {file_count}")
         print(f"   Documents indexed: {len(docs)}")
         print(f"   Chat model: {LLM_CHAT_MODEL}")
 
@@ -1036,11 +1057,13 @@ async def add_document(request: DocumentRequest):
         raise HTTPException(status_code=503, detail="Vector store not initialized")
     
     try:
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50
+        metadata = request.metadata or {}
+        docs = split_into_chunks(
+            request.content,
+            title=metadata.get("title", "User document"),
+            topic=metadata.get("topic", "user"),
+            source=metadata.get("source", "api"),
         )
-        docs = text_splitter.create_documents([request.content])
         vectorstore.add_documents(docs)
         
         return {"status": "success", "message": "Document added successfully"}
@@ -1056,7 +1079,7 @@ async def get_info():
         "rag_initialized": retriever is not None and llm is not None,
         "vectoriser": "local-hashing-384",
         "chat_model": LLM_CHAT_MODEL,
-        "documents_loaded": len(SAMPLE_DOCUMENTS),
+        "documents_loaded": KNOWLEDGE_FILE_COUNT,
         "endpoints": [
             {"path": "/", "method": "GET", "description": "Service info"},
             {"path": "/health", "method": "GET", "description": "Health check"},
