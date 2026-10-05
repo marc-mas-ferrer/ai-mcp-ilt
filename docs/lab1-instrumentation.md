@@ -212,21 +212,27 @@ The Codespace forwards port 8000 and opens the chat interface automatically. If 
 
 ### 5.2 Generate RAG traces
 
-Make sure **Use Knowledge Base (RAG)** is enabled, and send at least three questions:
+Make sure **Use Knowledge Base (RAG)** is enabled, and send these questions (they are also the suggestion buttons above the chat box):
 
 ```text
-What is Dynatrace?
-How does OpenTelemetry work with Dynatrace?
-What is the Dynatrace MCP?
+How does this chatbot work?
+How do I find my traces in Dynatrace?
+Explain Grail and DQL
+How do I add OpenLLMetry to this app?
 ```
+
+Each answer should show a green **Grounded in N workshop sources** label.
 
 ### 5.3 Generate a direct LLM trace
 
-Disable **Use Knowledge Base (RAG)** and send:
+Disable **Use Knowledge Base (RAG)** and send two of the same questions again:
 
 ```text
-Explain observability in one sentence.
+Explain Grail and DQL
+How do I add OpenLLMetry to this app?
 ```
+
+These answers show an amber **General model knowledge** label. Compare them with the RAG answers in the next step.
 
 ### 5.4 Compare the two modes
 
@@ -252,7 +258,7 @@ Ask the same question with RAG on and off, then compare:
 | Your own app | Ends with an **In this workshop** section naming `ai-chat-service-{YOUR_ATTENDEE_ID}` | Cannot know your service name |
 | Code | Uses the endpoint, headers and packages from this workshop | May import packages that do not exist |
 
-Try **How do I add OpenLLMetry to this app?** and **How do I find my traces in Dynatrace?** for the clearest difference. Answers vary between runs, so ask a question twice if the first answer is unclear.
+The two questions you just asked in both modes, **Explain Grail and DQL** and **How do I add OpenLLMetry to this app?**, show the clearest difference. Answers vary between runs, so ask a question twice if the first answer is unclear.
 
 > **You will not see an embedding-model span.** Retrieval vectors are generated in-process by a local hashing function, so there is no call to a hosted embedding service and no embedding token cost. You will still see the `retrieve_documents` task and the ChromaDB query around it.
 

@@ -60,11 +60,15 @@ Open the AI Chat interface and send several messages with **Use Knowledge Base (
 Example questions:
 
 ```text
-What is Dynatrace?
+How does this chatbot work?
 ```
 
 ```text
-How does OpenTelemetry work with Dynatrace?
+How do I find my traces in Dynatrace?
+```
+
+```text
+How do I add OpenLLMetry to this app?
 ```
 
 ```text

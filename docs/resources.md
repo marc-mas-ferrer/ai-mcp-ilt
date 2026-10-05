@@ -456,7 +456,7 @@ curl -s http://localhost:8000/info
 curl -s http://localhost:8000/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "message": "What is Dynatrace?",
+    "message": "How does this chatbot work?",
     "use_rag": true,
     "simulate_errors": false
   }'

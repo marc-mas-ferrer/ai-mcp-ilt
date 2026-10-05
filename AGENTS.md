@@ -114,7 +114,7 @@ The UI has a **🐛 Simulate Errors** toggle that generates realistic RAG/LLM er
 |------------|-----------|-----------|
 | `EMB_NULL_VECTOR` | EmbeddingServiceError | Null vectors from embedding model |
 | `CHROMA_COLLECTION_ERR` | VectorStoreConnectionError | ChromaDB connection failure |
-| `LLM_MALFORMED_RESPONSE` | LLMResponseError | Invalid JSON from Azure OpenAI |
+| `LLM_MALFORMED_RESPONSE` | LLMResponseError | Invalid response from the LLM gateway |
 | `CTX_WINDOW_EXCEEDED` | ContextWindowExceededError | Token limit exceeded |
 | `DOC_NO_MATCHES` | DocumentRetrievalError | No relevant documents found |
 | `RAG_CHAIN_TIMEOUT` | RAGPipelineError | LangChain execution timeout |
@@ -139,5 +139,4 @@ Do not modify without good reason:
 ## Key URLs
 
 - Workshop Guide: https://marc-mas-ferrer.github.io/ai-mcp-ilt
-- Secrets Server: https://workshop-secrets-server.azurewebsites.net
 - Codespace: https://codespaces.new/marc-mas-ferrer/ai-mcp-ilt?quickstart=1

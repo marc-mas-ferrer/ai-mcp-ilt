@@ -284,7 +284,7 @@ Make sure **Use Knowledge Base (RAG)** is enabled.
 Send:
 
 ```text
-What is Dynatrace?
+How does this chatbot work?
 ```
 
 Verify that you receive:
@@ -298,7 +298,7 @@ Verify that you receive:
 Disable **Use Knowledge Base (RAG)** and send:
 
 ```text
-What is OpenTelemetry?
+How does this chatbot work?
 ```
 
 Verify that you receive an AI-generated response labelled **General model knowledge**, without knowledge-base sources.
