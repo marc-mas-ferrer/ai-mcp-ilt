@@ -26,6 +26,7 @@
         "python.defaultInterpreterPath": "/usr/local/bin/python",
         "python.terminal.activateEnvironment": true,
         "editor.formatOnSave": true,
+        "task.allowAutomaticTasks": "on",
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
