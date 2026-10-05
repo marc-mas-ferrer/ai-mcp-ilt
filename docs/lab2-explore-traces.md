@@ -181,7 +181,7 @@ The exact names of automatically generated spans may vary depending on the versi
 
 ### 4.2 Examine an LLM span
 
-Open the LLM child span under `analyze_query_intent.task` or `generate_response.task`.
+Open the LLM child span (e.g. `ChatOpenAI.chat`) under `analyze_query_intent.task` or `generate_response.task`.
 
 Look for the following attributes when available:
 
