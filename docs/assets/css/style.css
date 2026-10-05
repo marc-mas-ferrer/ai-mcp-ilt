@@ -208,6 +208,7 @@ body {
 .sidebar-link:hover {
     background: var(--gray-100);
     color: var(--dt-purple);
+    text-decoration: none;
 }
 
 .sidebar-link.active {
