@@ -246,7 +246,7 @@ FastAPI instrumented - HTTP endpoints will create trace spans
 RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
    Vectoriser: local-hashing-384
    Knowledge files: 7
-   Documents indexed: 41
+   Documents indexed: 42
    Chat model: workshop-chat
 
 Uvicorn running on http://0.0.0.0:8000

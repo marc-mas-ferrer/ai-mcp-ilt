@@ -260,7 +260,7 @@ Depending on the instrumentation version, you may see attributes such as:
 | `db.chroma.query.n_results` | Number of results requested or returned |
 | `db.chroma.query.embeddings_count` | Number of query embeddings |
 
-The RAG application is configured to retrieve four relevant knowledge-base chunks, selected with maximal marginal relevance (MMR) so they cover different sections rather than repeating one.
+The RAG application is configured to find the knowledge-base section that best matches the question and return it together with the other sections of the same topic, plus up to two closely related sections from other topics. The number of sections therefore varies from about one to ten, depending on the topic.
 
 Consider:
 

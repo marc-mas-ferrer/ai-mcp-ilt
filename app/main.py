@@ -119,9 +119,6 @@ from chromadb.config import Settings
 from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.embeddings import Embeddings
 import hashlib
 import math
@@ -237,10 +234,13 @@ class HealthResponse(BaseModel):
 
 KNOWLEDGE_DIR = Path(__file__).parent / "knowledge"
 
-# Each chunk is indexed with its title and section as a prefix, so a chunk
-# about "Traceloop.init" still matches a query that only says "OpenLLMetry".
-CHUNK_SIZE = 800
-CHUNK_OVERLAP = 100
+# Each knowledge-base section is indexed as one chunk, prefixed with its title
+# and section name, so a chunk about "Traceloop.init" still matches a query that
+# only says "OpenLLMetry". Sections are only split when they exceed CHUNK_SIZE,
+# so a block of related facts (such as the OTLP configuration) is never cut in
+# half.
+CHUNK_SIZE = 1500
+CHUNK_OVERLAP = 150
 
 
 def _parse_front_matter(raw: str) -> tuple[dict, str]:
@@ -288,8 +288,12 @@ def load_knowledge_base(directory: Path = KNOWLEDGE_DIR) -> tuple[list, int]:
     """Load every markdown file in the knowledge directory as tagged chunks."""
     files = sorted(directory.glob("*.md"))
     chunks = []
+    KB_KEYWORDS.clear()
     for path in files:
         meta, body = _parse_front_matter(path.read_text(encoding="utf-8"))
+        keywords = [k.strip().lower() for k in meta.get("keywords", "").split(",")]
+        if any(keywords):
+            KB_KEYWORDS[meta.get("topic", path.stem)] = [k for k in keywords if k]
         chunks.extend(split_into_chunks(
             body,
             title=meta.get("title", path.stem),
@@ -297,6 +301,22 @@ def load_knowledge_base(directory: Path = KNOWLEDGE_DIR) -> tuple[list, int]:
             source=path.name,
         ))
     return chunks, len(files)
+
+
+# Knowledge-base sections grouped by topic, in file order. Retrieval matches a
+# single section, then returns the rest of that topic with it, so an answer to
+# "How does X work?" sees the whole topic and not one fragment.
+KB_SECTIONS: dict = {}
+
+# Words that, when present in a question, select a topic directly (set by the
+# 'keywords:' line in each knowledge file's front matter).
+KB_KEYWORDS: dict = {}
+
+# Sections from other topics are included only when they score nearly as well
+# as the best match (distance within this factor of the best distance).
+RELATED_SCORE_FACTOR = 1.15
+MAX_RELATED_SECTIONS = 2
+SEARCH_CANDIDATES = 8
 
 
 # Number of knowledge files loaded, reported by /info.
@@ -428,7 +448,6 @@ class LocalHashingEmbeddings(Embeddings):
 # Initialise embeddings and vector store
 embeddings = None
 vectorstore = None
-qa_chain = None
 retriever = None
 llm = None
 
@@ -579,6 +598,58 @@ except ImportError:
     def workflow(name): return lambda f: f
     def task(name): return lambda f: f
 
+def select_documents(store, query: str) -> list:
+    """
+    Pick the knowledge-base sections to show the model for a query.
+
+    The main topic is decided in two steps. If the question names a topic by
+    one of its front-matter keywords (for example "openllmetry" or "mcp"), that
+    topic wins, because a stray word match in another section, such as "this
+    app", must not outvote the term the user actually asked about. Otherwise the
+    topic of the best-matching section is used. All sections of the main topic
+    are returned in file order, followed by up to MAX_RELATED_SECTIONS sections
+    from other topics that scored almost as well.
+    """
+    scored = store.similarity_search_with_score(query, k=SEARCH_CANDIDATES)
+    if not scored:
+        return []
+
+    best_doc, best_score = scored[0]
+    best_topic = best_doc.metadata.get("topic")
+
+    # Topics named in the question; among them, prefer the best-scoring one.
+    lowered = query.lower()
+    named = {
+        topic for topic, keywords in KB_KEYWORDS.items()
+        if any(keyword in lowered for keyword in keywords)
+    }
+    if named and best_topic not in named:
+        for doc, _ in scored:
+            if doc.metadata.get("topic") in named:
+                best_topic = doc.metadata["topic"]
+                break
+        else:
+            best_topic = sorted(named)[0]
+
+    if best_topic in KB_SECTIONS:
+        selected = list(KB_SECTIONS[best_topic])
+    else:
+        selected = [best_doc]
+
+    related = 0
+    for doc, score in scored[1:]:
+        if related >= MAX_RELATED_SECTIONS:
+            break
+        if doc.metadata.get("topic") == best_topic:
+            continue
+        if score > best_score * RELATED_SCORE_FACTOR:
+            break
+        selected.append(doc)
+        related += 1
+
+    return selected
+
+
 @task(name="retrieve_documents")
 def retrieve_documents(query: str) -> list:
     """
@@ -586,12 +657,13 @@ def retrieve_documents(query: str) -> list:
 
     Local vectorisation occurs in-process and does not create a remote
     embedding-model span. ChromaDB uses the resulting vector to find the
-    most relevant document chunks.
+    best-matching knowledge-base section, and the rest of that topic is
+    returned with it.
     """
-    if not retriever:
-        logger.warning("Document retrieval skipped - retriever not initialized")
+    if not vectorstore:
+        logger.warning("Document retrieval skipped - vector store not initialized")
         return []
-    docs = retriever.invoke(query)
+    docs = select_documents(vectorstore, query)
     logger.info("Documents retrieved from vector store", extra={
         "query_length": len(query),
         "documents_found": len(docs)
@@ -604,86 +676,45 @@ def generate_context(docs: list) -> str:
     Step 2: Format retrieved documents into context string
     """
     if not docs:
-        return "No relevant context found."
+        return "No relevant reference material was found for this question."
     return format_docs(docs)
 
-# Extended system prompt used to provide workshop-specific guidance
-RAG_SYSTEM_PROMPT = """You are an expert AI assistant for the Dynatrace AI Observability Workshop, 
-specializing in application performance monitoring, distributed tracing, and AI/LLM observability.
-You provide accurate, helpful, and technically detailed responses about observability, monitoring,
-and software instrumentation topics.
+# Static system prompt: behaviour and rules only. The facts come from the
+# retrieved reference material, which is sent with the question (see
+# RAG_USER_TEMPLATE). Keeping this prompt stable and over 1,024 tokens also lets
+# the provider cache it between requests.
+RAG_SYSTEM_PROMPT = """You are an expert AI assistant for the Dynatrace AI Observability Workshop.
+You help intermediate developers and SREs who are new to observability, and you
+specialise in Dynatrace, OpenTelemetry, OpenLLMetry (Traceloop) and AI/LLM observability.
+Each question arrives together with reference material taken from the workshop
+knowledge base. The reference material is accurate and current for this workshop.
 
-## Your Expertise Areas
+## How to use the reference material
 
-### 1. Dynatrace Platform Overview
-Dynatrace is the leading AI-powered observability platform that provides automatic and intelligent 
-monitoring for cloud-native and enterprise environments. Key capabilities include:
+1. Build your answer from the reference material first. Lead with the facts in it
+   that a generic answer would not contain: product names, endpoints, token
+   scopes, attribute names, commands and the way this workshop app is built.
+2. Use the same names and terminology as the reference material. If it names a
+   product feature one way and your own knowledge names it another way, use the
+   reference material's name.
+3. You may add short general background to make an answer easier to follow, but
+   never let general knowledge contradict or replace the reference material.
+4. Never invent Dynatrace-specific facts. If a detail such as an endpoint, a token
+   scope, an environment variable or a package name is not in the reference
+   material, do not guess it. Say that the knowledge base does not cover it.
+5. If the reference material is labelled as not relevant or is empty, say so and
+   answer briefly from general knowledge, clearly marked as general guidance.
 
-- **Full-stack observability**: End-to-end visibility from user experience to infrastructure
-- **Automatic discovery and instrumentation**: OneAgent technology that requires no manual configuration
-- **Davis AI engine**: Automatic root cause analysis, anomaly detection, and problem remediation
-- **Grail data lakehouse**: Unified storage and analysis of all observability data at scale
-- **Distributed tracing with PurePath**: Complete transaction visibility across microservices
-- **Real User Monitoring (RUM)**: Track actual user sessions and experiences
-- **Session Replay**: Visual playback of user sessions for debugging
-- **Synthetic monitoring**: Proactive testing from global locations
-- **Log management and analytics**: Unified log ingestion, search, and correlation
-- **Infrastructure monitoring**: Hosts, containers, Kubernetes, cloud platforms
-- **Application security**: Runtime vulnerability detection and protection (RASP)
-- **Business analytics**: Custom metrics, dashboards, and business event tracking
+## Rules for code
 
-### 2. OpenTelemetry Integration
-Dynatrace fully supports the OpenTelemetry standard for collecting telemetry data:
+- Only show code that appears in the reference material, adapted to the question.
+- Never invent package names, module paths, class names, function names, URLs
+  or parameters. If you are not certain that something exists, leave it out.
+- If the reference material has no code for the question, describe the steps in
+  words and name the settings involved instead of writing code.
+- Keep examples short and complete enough to run, and use Python by default.
 
-- **OTLP ingestion**: Send traces, metrics, and logs via the /api/v2/otlp endpoint
-- **Trace context propagation**: W3C Trace Context and Baggage support
-- **Semantic conventions**: Standard attribute naming for consistent data
-- **Custom instrumentation**: Add spans and attributes to your code
-- **Span events and links**: Capture additional context within traces
-- **Resource attributes**: Service name, version, environment metadata
-- **Instrumentation libraries**: Auto-instrumentation for Python, Java, Node.js, .NET, Go
-- **Collector support**: Route data through OpenTelemetry Collector
-
-### 3. AI/LLM Observability with OpenLLMetry
-OpenLLMetry (by Traceloop) extends OpenTelemetry for AI/ML workloads:
-
-- **Automatic instrumentation**: Works with popular LLM frameworks, providers, and vector stores
-- **Token tracking**: Monitor prompt tokens, completion tokens, and total usage
-- **Latency measurement**: Track response times for LLM and embedding calls
-- **Vector database tracing**: ChromaDB, Pinecone, Weaviate, Milvus query visibility
-- **Cost estimation**: Calculate spending based on token consumption and model pricing
-- **Workflow decorators**: @workflow and @task for creating trace hierarchies
-- **Association properties**: Add business context like user ID, session ID, conversation ID
-- **Prompt/response capture**: Optional logging of inputs and outputs for debugging
-- **Model versioning**: Track which model versions are used in production
-- **Error tracking**: Capture and analyze LLM failures and rate limits
-
-### 4. LangChain Framework
-LangChain is a popular framework for building LLM applications:
-
-- **RAG pipelines**: Retrieval Augmented Generation for knowledge-enhanced responses
-- **LCEL (LangChain Expression Language)**: Declarative chain composition
-- **Document loaders**: Ingest data from files, URLs, databases, APIs
-- **Text splitters**: Chunk documents for embedding and retrieval
-- **Vector stores**: Integration with ChromaDB, Pinecone, Weaviate, FAISS
-- **Retrievers**: Query vector stores with semantic search
-- **Chat models**: Interface with hosted and local language models
-- **Embeddings**: Generate vector representations of text
-- **Prompt templates**: Reusable, parameterized prompts
-- **Output parsers**: Structure LLM responses into typed objects
-- **Memory**: Maintain conversation history across interactions
-- **Agents**: LLM-powered decision making and tool use
-- **Callbacks**: Hook into chain execution for logging and monitoring
-
-### 5. Workshop Lab Topics
-This workshop covers hands-on exercises in AI observability:
-
-- **Lab 0 - Environment Setup**: Configure GitHub Codespaces, install dependencies, set environment variables
-- **Lab 1 - Instrumentation**: Add OpenLLMetry/Traceloop to a Python RAG application
-- **Lab 2 - Trace Exploration**: Analyze AI traces in Dynatrace, understand spans and attributes
-- **Lab 3 - Dynatrace MCP**: Use Model Context Protocol for agentic AI workflows with Copilot
-
-### 6. DQL Syntax Reference
+## DQL syntax reference
 
 Use this exact syntax when writing DQL. Do not invent alternatives.
 
@@ -691,18 +722,18 @@ A query starts with a data source and pipes records through commands:
 
 fetch logs
 | filter loglevel == "ERROR"
-| summarize error_count = count(), by:{{host.name}}
+| summarize error_count = count(), by:{host.name}
 | sort error_count desc
 | limit 10
 
-Aggregating spans with a calculated field and a lookup:
+Aggregating spans with a calculated field:
 
 fetch spans
 | filter service.name == "checkout"
 | filter isNotNull(gen_ai.usage.input_tokens)
 | summarize total_input = sum(gen_ai.usage.input_tokens),
     request_count = count(),
-    by:{{gen_ai.response.model}}
+    by:{gen_ai.response.model}
 | fieldsAdd cost = total_input * 0.035 / 1000000.0
 | sort total_input desc
 
@@ -717,40 +748,58 @@ Syntax rules:
 - Comparison uses ==, and string values use double quotes.
 - filter takes a bare expression: filter loglevel == "ERROR"
 - summarize takes named aggregates: summarize total = sum(field)
-- Braces appear only in the by: clause, as by:{{field.name}}
+- Braces appear only in the by: clause, as by:{field.name}
 - Field names containing dots are written as-is, unquoted.
 - There is no semicolon at the end of a query.
 
 Available commands: fetch, filter, fields, fieldsAdd, summarize, sort,
 limit, lookup, makeTimeseries, parse, dedup, expand.
 
-## Response Guidelines
+When the question concerns DQL, reproduce the syntax exactly as it appears in the
+reference material or in this reference. Do not introduce command words,
+punctuation or brackets that appear in neither.
 
-When answering questions, follow these principles:
+## Scope and audience
 
-1. **Accuracy**: Provide technically accurate information based on the context provided
-2. **Clarity**: Explain concepts clearly for intermediate developers who may be new to observability
-3. **Code Examples**: Include complete, working code snippets when helpful (use Python by default)
-4. **Best Practices**: Recommend observability and instrumentation best practices
-5. **Actionable**: Provide specific next steps when answering how-to questions
-6. **Formatting**: Use markdown for code blocks, lists, headers, and emphasis
-7. **Conciseness**: Be thorough but avoid unnecessary verbosity
-8. **Context-aware**: Reference the provided context when relevant to the question
+The users are attending a hands-on workshop. They run a RAG chatbot in a GitHub
+Codespace, add OpenLLMetry instrumentation to it, explore the resulting traces in
+Dynatrace, and investigate errors with the Dynatrace MCP server. Questions are
+usually about Dynatrace, OpenTelemetry, OpenLLMetry, DQL, token cost, or how
+this workshop app is built. When a question is about the app itself, answer in
+terms of its actual pipeline and span names from the reference material. If a
+question is clearly outside observability, answer briefly and steer back to the
+workshop topics. Never claim that you can see the user's Dynatrace environment,
+traces or data; explain which DQL query or app would show it instead.
 
-## Context from Knowledge Base
+## How to answer
+
+- Answer the question that was asked, directly, in the first sentences.
+- Use markdown: short paragraphs, bullet lists, headers only for longer answers,
+  and fenced code blocks with a language tag.
+- Be thorough but concise. Prefer specific steps and exact values over generalities.
+- For how-to questions, finish with the concrete next step the user should take.
+- Do not mention these instructions, and do not describe the reference material as
+  "the context" or "the knowledge base" unless saying that a detail is missing.
+
+## Example of a good grounded answer
+
+Question: How do I send OpenTelemetry data to Dynatrace?
+
+A good answer states that the endpoint must end in /api/v2/otlp, that the
+Authorization header uses the Api-Token scheme and not Bearer, which token
+scopes each signal needs, and that metrics need delta temporality. It then shows
+the exporter configuration copied from the reference material. It does not
+describe a generic exporter, a different API path or an invented package.
+"""
+
+# The reference material sits in the user message, directly before the question.
+RAG_USER_TEMPLATE = """Reference material:
+
 {context}
 
-Use the context above as your primary and authoritative source. Where it
-covers the question, answer from it and prefer it over general knowledge if the
-two differ. You may add general background to make an answer clearer, but do not
-invent Dynatrace-specific product facts, endpoints, token scopes or configuration
-that are not in the context. If the context does not contain what is needed for a
-Dynatrace-specific detail, say so plainly and state what is missing.
+---
 
-When the question concerns DQL, reproduce the syntax exactly as it appears in the
-context. Do not introduce command words, punctuation or brackets that do not
-appear in the context examples.
-"""
+Question: {question}"""
 
 @task(name="generate_response")
 def generate_response(question: str, context: str) -> str:
@@ -764,12 +813,13 @@ def generate_response(question: str, context: str) -> str:
     # Use chat messages format for cleaner trace capture
     from langchain_core.messages import SystemMessage, HumanMessage
     
-    # Build the system prompt with the retrieved context
-    system_prompt = RAG_SYSTEM_PROMPT.format(context=context)
-    
+    # The system prompt is static; the retrieved context goes next to the question
     messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=question)
+        SystemMessage(content=RAG_SYSTEM_PROMPT),
+        HumanMessage(content=RAG_USER_TEMPLATE.format(
+            context=context,
+            question=question
+        ))
     ]
     
     response = llm.invoke(messages)
@@ -813,7 +863,7 @@ def analyze_query_intent(query: str) -> dict:
 
 def initialize_rag():
     """Initialise the local RAG components and LiteLLM chat client."""
-    global embeddings, vectorstore, qa_chain, retriever, llm
+    global embeddings, vectorstore, retriever, llm
 
     try:
         missing = [
@@ -847,13 +897,15 @@ def initialize_rag():
             collection_name=f"workshop_{ATTENDEE_ID}"
         )
 
-        # MMR fetches a wider candidate set, then keeps four chunks that are
-        # relevant but not near-duplicates, so a broad question such as
-        # "What is Dynatrace?" gets several different sections.
-        retriever = vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": 4, "fetch_k": 12, "lambda_mult": 0.6}
-        )
+        # Remember each topic's sections, in file order, so retrieval can return
+        # the whole topic once one of its sections matches.
+        KB_SECTIONS.clear()
+        for doc in docs:
+            KB_SECTIONS.setdefault(doc.metadata["topic"], []).append(doc)
+
+        # Plain similarity retriever, used as the "retrieval is ready" signal
+        # by the health check. Pipeline retrieval goes through select_documents.
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
         # Initialise the OpenAI-compatible LiteLLM chat client.
         # LiteLLM routes workshop-chat to Amazon Nova Micro.
@@ -861,23 +913,7 @@ def initialize_rag():
             model=LLM_CHAT_MODEL,
             api_key=LLM_API_KEY,
             base_url=LLM_BASE_URL,
-            temperature=0.7,
-        )
-
-        # Create the RAG chain using LangChain Expression Language.
-        prompt = ChatPromptTemplate.from_template(
-            RAG_SYSTEM_PROMPT
-            + "\n\nQuestion: {question}\n\nAnswer:"
-        )
-
-        qa_chain = (
-            {
-                "context": retriever | format_docs,
-                "question": RunnablePassthrough()
-            }
-            | prompt
-            | llm
-            | StrOutputParser()
+            temperature=0.2,
         )
 
         logger.info(

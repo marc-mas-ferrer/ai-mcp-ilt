@@ -1,6 +1,7 @@
 ---
 title: Grail and DQL
 topic: dql
+keywords: dql, grail
 ---
 
 ## Grail

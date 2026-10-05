@@ -1,6 +1,7 @@
 ---
 title: AI Observability
 topic: ai-observability
+keywords: token cost, prompt caching, gen_ai
 ---
 
 ## Token usage and cost

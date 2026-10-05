@@ -1,6 +1,7 @@
 ---
 title: Workshop App
 topic: workshop
+keywords: emb_, chroma_, simulated error, error code, lab 0, lab 1, lab 2, lab 3, lab 4
 ---
 
 ## The RAG chatbot

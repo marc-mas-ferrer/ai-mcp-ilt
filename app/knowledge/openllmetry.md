@@ -1,6 +1,7 @@
 ---
 title: OpenLLMetry
 topic: openllmetry
+keywords: openllmetry, traceloop
 ---
 
 ## What is OpenLLMetry

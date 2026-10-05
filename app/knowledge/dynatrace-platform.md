@@ -1,6 +1,7 @@
 ---
 title: Dynatrace Platform
 topic: dynatrace
+keywords: oneagent, smartscape, purepath, davis, dynatrace intelligence
 ---
 
 ## What is Dynatrace
@@ -9,7 +10,7 @@ Dynatrace is an AI-powered, full-stack observability platform that provides auto
 
 ## Core capabilities
 
-Full-stack observability gives end-to-end visibility from user experience down to infrastructure. Distributed tracing with PurePath shows complete transactions across microservices. Real User Monitoring (RUM) and Session Replay track real user sessions. Synthetic monitoring tests proactively from global locations. Log management and analytics ingest, search and correlate logs. Infrastructure monitoring covers hosts, containers, Kubernetes and cloud platforms. Application Security detects runtime vulnerabilities. Business analytics supports custom metrics, dashboards and business events.
+Full-stack observability gives end-to-end visibility from user experience down to infrastructure. Distributed tracing with PurePath shows complete transactions across microservices, from the browser through every service call and database query. Real User Monitoring (RUM) tracks real user sessions and Session Replay plays them back visually for debugging. Synthetic monitoring tests proactively from global locations. Log management and analytics ingest, search and correlate logs. Infrastructure monitoring covers hosts, containers, Kubernetes and cloud platforms. Application Security detects runtime vulnerabilities. Business analytics supports custom metrics, dashboards and business events.
 
 ## Dynatrace Intelligence
 

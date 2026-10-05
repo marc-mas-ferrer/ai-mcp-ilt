@@ -1,6 +1,7 @@
 ---
 title: Dynatrace MCP Server
 topic: mcp
+keywords: mcp, model context protocol
 ---
 
 ## Dynatrace MCP server

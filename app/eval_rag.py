@@ -1,9 +1,18 @@
 """
-Offline retrieval check for the workshop knowledge base. No LLM is called.
+Retrieval check for the workshop knowledge base.
 
-Run from the project root:   python app/eval_rag.py
-Prints the retrieved sections for each question and exits non-zero if the
-expected topic is not among the top results.
+Run from the project root:
+
+    python app/eval_rag.py          # offline: no LLM call, checks the context
+    python app/eval_rag.py --llm    # also asks the chat model, RAG on and off
+
+The offline check assembles the same context the app would send to the model
+and asserts that the facts a good answer needs are in it, and that unrelated
+topics are not. A topic match alone is not enough: the right section can be
+retrieved while the fact inside it is cut off.
+
+--llm needs the LLM_* values from .env and prints both answers per question,
+flagging invented names and missing facts.
 """
 import sys
 from pathlib import Path
@@ -14,47 +23,135 @@ from langchain_chroma import Chroma  # noqa: E402
 
 import main  # noqa: E402
 
-# (question, topic that must appear in the top TOP_N retrieved chunks)
-QUESTIONS = [
-    ("What is Dynatrace?", "dynatrace"),
-    ("What is OpenTelemetry?", "opentelemetry"),
-    ("What is OpenLLMetry?", "openllmetry"),
-    ("How do I send OpenTelemetry data to Dynatrace?", "opentelemetry"),
-    ("How do I add Traceloop to this app?", "openllmetry"),
-    ("What are the @workflow and @task decorators?", "openllmetry"),
-    ("What is Grail?", "dql"),
-    ("How do I write a DQL query to count errors by host?", "dql"),
-    ("How do I calculate token cost?", "ai-observability"),
-    ("What does the Dynatrace MCP server do?", "mcp"),
-    ("What does EMB_NULL_VECTOR mean?", "workshop"),
+# question -> (facts the context must contain, topics that must not appear)
+CASES = [
+    ("What is Dynatrace?",
+     ["Dynatrace Intelligence", "Smartscape", "OneAgent"],
+     {"dql", "mcp"}),
+    ("How does OpenTelemetry work?",
+     ["OTLP", "exporter", "Collector"],
+     {"dql", "mcp"}),
+    ("How do I send OpenTelemetry data to Dynatrace?",
+     ["/api/v2/otlp", "Api-Token", "openTelemetryTrace.ingest", "OTLPSpanExporter"],
+     {"dql", "mcp"}),
+    ("What is OpenLLMetry?",
+     ["Traceloop", "gen_ai.usage.input_tokens", "@workflow"],
+     {"dql", "mcp"}),
+    ("How do I add OpenLLMetry to this app?",
+     ["Traceloop.init", "api_endpoint", "Api-Token"],
+     {"dql", "mcp"}),
+    ("Explain Grail and DQL",
+     ["data lakehouse", "fetch logs", "summarize"],
+     {"openllmetry", "mcp"}),
+    ("How do I calculate token cost?",
+     ["gen_ai.usage.input_tokens", "per million"],
+     {"dql", "mcp"}),
+    ("What does the Dynatrace MCP server do?",
+     ["Model Context Protocol", "GitHub Copilot"],
+     {"dql", "openllmetry"}),
+    ("What does EMB_NULL_VECTOR mean?",
+     ["EMB_NULL_VECTOR", "null vector"],
+     {"dql", "mcp"}),
 ]
-TOP_N = 2
+
+# Names a model invents when it has no real example to copy.
+HALLUCINATION_MARKERS = [
+    "DynatraceSpanExporter",
+    "opentelemetry.exporter.dynatrace",
+    "api/v1",
+    "Bearer ",
+    "SimpleConfig",
+]
 
 
-def main_eval() -> int:
+def build_store():
     docs, file_count = main.load_knowledge_base()
+    main.KB_SECTIONS.clear()
+    for doc in docs:
+        main.KB_SECTIONS.setdefault(doc.metadata["topic"], []).append(doc)
     store = Chroma.from_documents(
         documents=docs,
         embedding=main.LocalHashingEmbeddings(dimensions=384),
         collection_name="eval_rag",
     )
-    retriever = store.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 4, "fetch_k": 12, "lambda_mult": 0.6},
-    )
-    print(f"Knowledge files: {file_count}, chunks: {len(docs)}\n")
+    print(f"Knowledge files: {file_count}, sections: {len(docs)}\n")
+    return store
+
+
+def check_retrieval(store) -> tuple[int, dict]:
+    failures = 0
+    contexts = {}
+    for question, facts, banned in CASES:
+        docs = main.select_documents(store, question)
+        context = main.generate_context(docs)
+        contexts[question] = context
+
+        missing = [f for f in facts if f not in context]
+        off_topic = sorted({d.metadata["topic"] for d in docs} & banned)
+        ok = not missing and not off_topic
+        failures += 0 if ok else 1
+
+        print(f"{'PASS' if ok else 'FAIL'}  {question}  (~{len(context) // 4} tokens)")
+        for source in main.summarize_sources(docs):
+            print(f"        {source}")
+        if missing:
+            print(f"        MISSING FACTS: {missing}")
+        if off_topic:
+            print(f"        OFF-TOPIC: {off_topic}")
+    return failures, contexts
+
+
+def check_llm(contexts: dict) -> int:
+    """Ask the real model with and without RAG and flag problems."""
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_openai import ChatOpenAI
+
+    missing_config = [
+        n for n, v in {
+            "LLM_BASE_URL": main.LLM_BASE_URL,
+            "LLM_API_KEY": main.LLM_API_KEY,
+        }.items() if not v
+    ]
+    if missing_config:
+        print(f"\n--llm skipped, missing: {', '.join(missing_config)}")
+        return 0
+
+    rag_llm = ChatOpenAI(model=main.LLM_CHAT_MODEL, api_key=main.LLM_API_KEY,
+                         base_url=main.LLM_BASE_URL, temperature=0.2)
+    plain_llm = ChatOpenAI(model=main.LLM_CHAT_MODEL, api_key=main.LLM_API_KEY,
+                           base_url=main.LLM_BASE_URL, temperature=0.7)
 
     failures = 0
-    for question, expected in QUESTIONS:
-        results = retriever.invoke(question)
-        topics = [d.metadata["topic"] for d in results[:TOP_N]]
-        ok = expected in topics
-        failures += 0 if ok else 1
-        print(f"{'PASS' if ok else 'FAIL'}  {question}  (expect: {expected})")
-        for d in results:
-            print(f"        {d.metadata['title']} - {d.metadata['section']}")
+    for question, facts, _ in CASES:
+        rag_answer = rag_llm.invoke([
+            SystemMessage(content=main.RAG_SYSTEM_PROMPT),
+            HumanMessage(content=main.RAG_USER_TEMPLATE.format(
+                context=contexts[question], question=question)),
+        ]).content
+        plain_answer = plain_llm.invoke(question).content
 
-    print(f"\n{len(QUESTIONS) - failures}/{len(QUESTIONS)} passed")
+        invented = [m for m in HALLUCINATION_MARKERS if m in rag_answer]
+        absent = [f for f in facts if f.lower() not in rag_answer.lower()]
+        # Only the facts that carry the point are expected in the answer itself.
+        problems = bool(invented)
+        failures += 1 if problems else 0
+
+        print(f"\n{'=' * 78}\n{question}")
+        print(f"  RAG answer mentions facts: {len(facts) - len(absent)}/{len(facts)}"
+              f"   not mentioned: {absent}")
+        if invented:
+            print(f"  INVENTED NAMES IN RAG ANSWER: {invented}")
+        print(f"\n--- RAG ON ---\n{rag_answer}\n\n--- RAG OFF ---\n{plain_answer}")
+    return failures
+
+
+def main_eval() -> int:
+    store = build_store()
+    failures, contexts = check_retrieval(store)
+    print(f"\n{len(CASES) - failures}/{len(CASES)} retrieval checks passed")
+
+    if "--llm" in sys.argv:
+        failures += check_llm(contexts)
     return 1 if failures else 0
 
 
