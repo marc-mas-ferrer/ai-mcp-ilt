@@ -246,7 +246,7 @@ FastAPI instrumented - HTTP endpoints will create trace spans
 RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
    Vectoriser: local-hashing-384
    Knowledge files: 7
-   Documents indexed: 42
+   Documents indexed: 43
    Chat model: workshop-chat
 
 Uvicorn running on http://0.0.0.0:8000
@@ -289,7 +289,7 @@ What is Dynatrace?
 
 Verify that you receive:
 
-- An AI-generated response
+- An AI-generated response with a **Grounded in N workshop sources** label
 - Knowledge-base sources
 - Your Workshop ID in the interface
 
@@ -301,7 +301,7 @@ Disable **Use Knowledge Base (RAG)** and send:
 What is OpenTelemetry?
 ```
 
-Verify that you receive an AI-generated response without knowledge-base retrieval.
+Verify that you receive an AI-generated response labelled **General model knowledge**, without knowledge-base sources.
 
 ### 5.6 Stop the application
 

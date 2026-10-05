@@ -1,7 +1,7 @@
 ---
 title: Workshop App
 topic: workshop
-keywords: emb_, chroma_, simulated error, error code, lab 0, lab 1, lab 2, lab 3, lab 4
+keywords: chatbot, rag pipeline, my traces, your traces, emb_, chroma_, simulated error, error code, lab 0, lab 1, lab 2, lab 3, lab 4
 ---
 
 ## The RAG chatbot
@@ -19,6 +19,10 @@ Retrieval vectors are produced by a local, deterministic hashing function, Local
 ## Models and configuration
 
 Chat completions go through LiteLLM, which routes the workshop-chat model to Amazon Nova Micro. Important settings are LLM_BASE_URL, LLM_API_KEY and LLM_CHAT_MODEL for the model, and DT_ENDPOINT (ending in /api/v2/otlp) and DT_API_TOKEN for Dynatrace. ATTENDEE_ID is used in the service name ai-chat-service-ATTENDEE_ID so each attendee can find their own traces.
+
+## Finding your traces in Dynatrace
+
+Every attendee sends data to the same Dynatrace environment, so each app has its own service name, ai-chat-service-ATTENDEE_ID, taken from the ATTENDEE_ID value in the .env file. Filter on that name to see only your own traces, for example: fetch spans | filter service.name == "ai-chat-service-ATTENDEE_ID". Your traces appear only after Lab 1 adds the OpenLLMetry instrumentation. Before Lab 1 only logs and FastAPI HTTP spans arrive.
 
 ## Workshop labs
 

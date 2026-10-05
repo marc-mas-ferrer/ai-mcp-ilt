@@ -11,8 +11,10 @@ and asserts that the facts a good answer needs are in it, and that unrelated
 topics are not. A topic match alone is not enough: the right section can be
 retrieved while the fact inside it is cut off.
 
---llm needs the LLM_* values from .env and prints both answers per question,
-flagging invented names and missing facts.
+--llm needs the LLM_* values from .env. It asks every question three times and
+fails a run if the RAG answer invents a name, lacks the attendee's service name or
+an "In this workshop" section, or contains fewer than two of the key facts. The
+RAG-off answer is printed for comparison.
 """
 import sys
 from pathlib import Path
@@ -49,10 +51,19 @@ CASES = [
     ("What does the Dynatrace MCP server do?",
      ["Model Context Protocol", "GitHub Copilot"],
      {"dql", "openllmetry"}),
+    ("How does this chatbot work?",
+     ["rag_chat_pipeline", "retrieve_documents", "LocalHashingEmbeddings"],
+     {"dql", "mcp"}),
+    ("How do I find my traces in Dynatrace?",
+     ["service.name", "ai-chat-service-"],
+     {"mcp"}),
     ("What does EMB_NULL_VECTOR mean?",
      ["EMB_NULL_VECTOR", "null vector"],
      {"dql", "mcp"}),
 ]
+
+# Each question is asked this many times in --llm mode, to check consistency.
+REPEATS = 3
 
 # Names a model invents when it has no real example to copy.
 HALLUCINATION_MARKERS = [
@@ -87,6 +98,8 @@ def check_retrieval(store) -> tuple[int, dict]:
         contexts[question] = context
 
         missing = [f for f in facts if f not in context]
+        if main.build_environment_block() not in context:
+            missing.append("environment block")
         off_topic = sorted({d.metadata["topic"] for d in docs} & banned)
         ok = not missing and not off_topic
         failures += 0 if ok else 1
@@ -122,7 +135,8 @@ def check_llm(contexts: dict) -> int:
                            base_url=main.LLM_BASE_URL, temperature=0.7)
 
     failures = 0
-    for question, facts, _ in CASES:
+    runs = [(q, f, b, run) for q, f, b in CASES for run in range(1, REPEATS + 1)]
+    for question, facts, _, run in runs:
         rag_answer = rag_llm.invoke([
             SystemMessage(content=main.RAG_SYSTEM_PROMPT),
             HumanMessage(content=main.RAG_USER_TEMPLATE.format(
@@ -132,15 +146,23 @@ def check_llm(contexts: dict) -> int:
 
         invented = [m for m in HALLUCINATION_MARKERS if m in rag_answer]
         absent = [f for f in facts if f.lower() not in rag_answer.lower()]
-        # Only the facts that carry the point are expected in the answer itself.
-        problems = bool(invented)
-        failures += 1 if problems else 0
+        service = f"ai-chat-service-{main.ATTENDEE_ID}"
+        lacks_service = service not in rag_answer
+        lacks_workshop = "in this workshop" not in rag_answer.lower()
+        too_few_facts = len(facts) - len(absent) < min(2, len(facts))
+        failures += 1 if (invented or lacks_service or lacks_workshop or too_few_facts) else 0
 
-        print(f"\n{'=' * 78}\n{question}")
+        print(f"\n{'=' * 78}\n{question}  (run {run}/{REPEATS})")
         print(f"  RAG answer mentions facts: {len(facts) - len(absent)}/{len(facts)}"
               f"   not mentioned: {absent}")
         if invented:
             print(f"  INVENTED NAMES IN RAG ANSWER: {invented}")
+        if lacks_service:
+            print(f"  MISSING SERVICE NAME ({service}) IN RAG ANSWER")
+        if lacks_workshop:
+            print("  MISSING 'In this workshop' SECTION IN RAG ANSWER")
+        if too_few_facts:
+            print("  FEWER THAN 2 KEY FACTS IN RAG ANSWER")
         print(f"\n--- RAG ON ---\n{rag_answer}\n\n--- RAG OFF ---\n{plain_answer}")
     return failures
 

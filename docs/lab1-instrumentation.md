@@ -241,6 +241,19 @@ Explain observability in one sentence.
 
 Generating both kinds of traffic now will make the differences easier to identify in Lab 2.
 
+#### What to compare in the answers
+
+Ask the same question with RAG on and off, then compare:
+
+| Look for | RAG enabled | RAG disabled |
+|---|---|---|
+| Label above the answer | Grounded in N workshop sources | General model knowledge, not checked against workshop material |
+| Product naming | Current names such as Dynatrace Intelligence and Grail | Often older or generic names |
+| Your own app | Ends with an **In this workshop** section naming `ai-chat-service-{YOUR_ATTENDEE_ID}` | Cannot know your service name |
+| Code | Uses the endpoint, headers and packages from this workshop | May import packages that do not exist |
+
+Try **How do I add OpenLLMetry to this app?** and **How do I find my traces in Dynatrace?** for the clearest difference. Answers vary between runs, so ask a question twice if the first answer is unclear.
+
 > **You will not see an embedding-model span.** Retrieval vectors are generated in-process by a local hashing function, so there is no call to a hosted embedding service and no embedding token cost. You will still see the `retrieve_documents` task and the ChromaDB query around it.
 
 > **Tip:** Automatic span names and attributes can vary between instrumentation versions. In Lab 2, identify spans by their position and purpose rather than by one exact name.

@@ -670,14 +670,36 @@ def retrieve_documents(query: str) -> list:
     })
     return docs
 
+def build_environment_block() -> str:
+    """
+    Facts about this attendee's own running app. A general model cannot know any
+    of this, so including it in every answer shows what RAG adds.
+    """
+    service = f"ai-chat-service-{ATTENDEE_ID}"
+    return (
+        "[Source: Your workshop environment]\n"
+        "Facts about the attendee's own running app:\n"
+        f"- Service name in Dynatrace: {service}\n"
+        f"- Chat model: {LLM_CHAT_MODEL}\n"
+        "- To find this app's traces in Dynatrace, run this DQL:\n"
+        "fetch spans\n"
+        f'| filter service.name == "{service}"\n'
+        "| sort start_time desc\n"
+        "| limit 20"
+    )
+
+
 @task(name="generate_context")
 def generate_context(docs: list) -> str:
     """
     Step 2: Format retrieved documents into context string
     """
     if not docs:
-        return "No relevant reference material was found for this question."
-    return format_docs(docs)
+        return (
+            "No relevant reference material was found for this question.\n\n---\n\n"
+            + build_environment_block()
+        )
+    return format_docs(docs) + "\n\n---\n\n" + build_environment_block()
 
 # Static system prompt: behaviour and rules only. The facts come from the
 # retrieved reference material, which is sent with the question (see
@@ -774,10 +796,20 @@ traces or data; explain which DQL query or app would show it instead.
 ## How to answer
 
 - Answer the question that was asked, directly, in the first sentences.
+- For "what is" and "explain" questions: give a two-sentence definition, then the
+  four to six most distinctive facts from the reference material, in about 200
+  words. Do not reproduce the whole reference material.
+- For "how do I" questions: give the steps, the real code from the reference
+  material, and the common mistakes it lists.
+- Cite the section you used for specific facts, inline, in square brackets, for
+  example [OpenTelemetry - Sending OpenTelemetry data to Dynatrace].
+- End every answer with a short section titled **In this workshop** that connects
+  the answer to the attendee's own app, using the "Your workshop environment" part
+  of the reference material: their service name, the DQL that finds their traces,
+  or the lab where the topic applies. Never skip it, and never invent values for it.
 - Use markdown: short paragraphs, bullet lists, headers only for longer answers,
   and fenced code blocks with a language tag.
-- Be thorough but concise. Prefer specific steps and exact values over generalities.
-- For how-to questions, finish with the concrete next step the user should take.
+- Prefer specific steps and exact values over generalities.
 - Do not mention these instructions, and do not describe the reference material as
   "the context" or "the knowledge base" unless saying that a detail is missing.
 
@@ -788,7 +820,8 @@ Question: How do I send OpenTelemetry data to Dynatrace?
 A good answer states that the endpoint must end in /api/v2/otlp, that the
 Authorization header uses the Api-Token scheme and not Bearer, which token
 scopes each signal needs, and that metrics need delta temporality. It then shows
-the exporter configuration copied from the reference material. It does not
+the exporter configuration copied from the reference material, cites its source,
+and ends with **In this workshop**, naming the attendee's service. It does not
 describe a generic exporter, a different API path or an invented package.
 """
 
@@ -913,7 +946,7 @@ def initialize_rag():
             model=LLM_CHAT_MODEL,
             api_key=LLM_API_KEY,
             base_url=LLM_BASE_URL,
-            temperature=0.2,
+            temperature=0,
         )
 
         logger.info(
