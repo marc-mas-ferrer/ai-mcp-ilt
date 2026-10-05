@@ -101,7 +101,9 @@ venv.bak/
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/mcp.json
+!.vscode/tasks.json
 *.swp
 *.swo
 
