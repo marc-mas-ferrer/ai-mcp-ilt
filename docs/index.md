@@ -5,16 +5,12 @@ nav_order: 1
 ---
 
 <section class="home-hero">
-  <div class="home-hero-text">
-    <p class="home-eyebrow">Hands-on workshop</p>
-    <h1>Dynatrace AI Observability Workshop</h1>
-    <p class="home-lead">Learn to monitor AI and LLM applications with Dynatrace and the Model Context Protocol (MCP): from instrumentation to automated cost alerts.</p>
-    <div class="hero-buttons">
-      <a href="https://codespaces.new/marc-mas-ferrer/ai-mcp-ilt?quickstart=1" class="btn btn-light" target="_blank" rel="noopener">Launch workshop environment</a>
-      <a href="lab0-setup" class="btn btn-outline-light">Start Lab 0</a>
-    </div>
+  <h1>Dynatrace AI Observability Workshop</h1>
+  <p class="home-lead">Monitor AI and LLM applications with Dynatrace and the Model Context Protocol (MCP).</p>
+  <div class="hero-buttons">
+    <a href="https://codespaces.new/marc-mas-ferrer/ai-mcp-ilt?quickstart=1" class="btn btn-light" target="_blank" rel="noopener">Launch Codespace</a>
+    <a href="lab0-setup" class="btn btn-outline-light">Start Lab 0</a>
   </div>
-  <img class="home-hero-badge" src="{{ '/assets/images/badge.svg' | relative_url }}" alt="">
 </section>
 
 <div class="home-stats">

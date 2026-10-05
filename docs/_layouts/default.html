@@ -59,48 +59,48 @@
                     <ul class="sidebar-nav">
                         <li>
                             <a href="{{ '/' | relative_url }}" class="sidebar-link {% if page.url == '/' or page.url == '/index.html' %}active{% endif %}">
-                                <span class="sidebar-icon">🏠</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
                                 Home
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/lab0-setup' | relative_url }}" class="sidebar-link {% if page.url contains 'lab0' %}active{% endif %}">
-                                <span class="sidebar-icon">⚙️</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
                                 Lab 0: Setup
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/lab1-instrumentation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab1' %}active{% endif %}">
-                                <span class="sidebar-icon">🔬</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                                 Lab 1: Instrumentation
                                 <span class="sidebar-time">15 min</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/lab2-explore-traces' | relative_url }}" class="sidebar-link {% if page.url contains 'lab2' %}active{% endif %}">
-                                <span class="sidebar-icon">🔍</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                                 Lab 2: Explore Traces
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/lab3-dynatrace-mcp' | relative_url }}" class="sidebar-link {% if page.url contains 'lab3' %}active{% endif %}">
-                                <span class="sidebar-icon">🤖</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg>
                                 Lab 3: Dynatrace MCP
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/lab4-automation' | relative_url }}" class="sidebar-link {% if page.url contains 'lab4' %}active{% endif %}">
-                                <span class="sidebar-icon">⚡</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                                 Lab 4: Automation
                                 <span class="sidebar-time">30 min</span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ '/resources' | relative_url }}" class="sidebar-link {% if page.url contains 'resources' %}active{% endif %}">
-                                <span class="sidebar-icon">📚</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
                                 Resources
                             </a>
                         </li>
@@ -112,13 +112,13 @@
                     <ul class="sidebar-nav">
                         <li>
                             <a href="https://github.com/marc-mas-ferrer/ai-mcp-ilt" target="_blank" class="sidebar-link external">
-                                <span class="sidebar-icon">📦</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><polyline points="3 8 12 13 21 8"/><line x1="12" y1="13" x2="12" y2="22"/></svg>
                                 GitHub Repo
                             </a>
                         </li>
                         <li>
                             <a href="https://docs.dynatrace.com" target="_blank" class="sidebar-link external">
-                                <span class="sidebar-icon">📖</span>
+                                <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
                                 Dynatrace Docs
                             </a>
                         </li>
@@ -135,7 +135,7 @@
 
             <!-- Footer -->
             <footer class="footer">
-                <p>Built with 💜 by <a href="https://www.dynatrace.com">Dynatrace</a></p>
+                <p>Built by <a href="https://www.dynatrace.com">Dynatrace</a></p>
             </footer>
             <script src="{{ '/assets/js/workshop.js' | relative_url }}"></script>
         </main>
