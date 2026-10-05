@@ -85,10 +85,7 @@ Open a Dynatrace Notebook and run:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The result should include pricing records for:
-
-- `workshop-chat`
-- `us.amazon.nova-micro-v1:0`
+The result should include a pricing record for `workshop-chat`, the model identifier your spans record.
 
 The lookup fields should be:
 
@@ -194,9 +191,7 @@ The estimated cost will be very small. This is expected because Amazon Nova Micr
 
 ### 3.3 Understand the result
 
-The query groups by `gen_ai.response.model`, so you get one row per model identifier recorded in your spans.
-
-In Lab 2 you checked which identifier the instrumentation actually uses. If both `workshop-chat` and `us.amazon.nova-micro-v1:0` appear in your data, this query returns two rows, sorted with the highest token usage first. The condition and notification in the next steps read only the first row, which is worth remembering when you interpret the result.
+The query groups by `gen_ai.response.model`, so you get one row per model. The workshop uses a single model, `workshop-chat`, so expect one row. If you later add more models, the condition and notification in the next steps read only the first row (the highest token usage), which is worth remembering when you interpret the result.
 
 ---
 
@@ -463,12 +458,12 @@ fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.usage.input_tokens)
 | fields
-    timestamp,
+    start_time,
     span.name,
     gen_ai.response.model,
     gen_ai.usage.input_tokens,
     gen_ai.usage.output_tokens
-| sort timestamp desc
+| sort start_time desc
 | limit 20
 ```
 
@@ -500,7 +495,7 @@ Then inspect the lookup:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The value in `gen_ai.response.model` must exist in the lookup table's `model` field. Expected values are `workshop-chat` and `us.amazon.nova-micro-v1:0`.
+The value in `gen_ai.response.model` must exist in the lookup table's `model` field. The expected value is `workshop-chat`.
 
 If a different value is recorded, the instructor must add that exact value to the lookup table.
 

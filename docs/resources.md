@@ -174,7 +174,7 @@ Logging and FastAPI instrumentation are configured in the repository and run bef
 | Retrieved chunks | Up to 3 |
 | LLM calls per RAG request | 2 (intent classification and response generation) |
 
-Depending on the instrumentation, `gen_ai.response.model` may contain either `workshop-chat` or `us.amazon.nova-micro-v1:0`. Both lookup tables contain both values.
+Spans record `gen_ai.response.model` as `workshop-chat`, the alias the gateway returns. The Bedrock inference profile never appears in telemetry.
 
 ---
 
@@ -207,8 +207,8 @@ Replace `{YOUR_ATTENDEE_ID}` with your attendee ID before running the queries.
 ```dql
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
-| fields timestamp, trace.id, span.id, span.name, duration
-| sort timestamp desc
+| fields start_time, trace.id, span.id, span.name, duration
+| sort start_time desc
 | limit 100
 ```
 
@@ -323,7 +323,7 @@ fetch spans
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.usage.input_tokens)
-| fields timestamp, trace.id, span.name, gen_ai.response.model,
+| fields start_time, trace.id, span.name, gen_ai.response.model,
          gen_ai.usage.input_tokens, gen_ai.usage.output_tokens, duration
 | sort gen_ai.usage.input_tokens desc
 | limit 20

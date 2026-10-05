@@ -81,13 +81,7 @@ Open GitHub Copilot Chat from the VS Code toolbar.
 
 If your Copilot interface provides an agent-mode selector, switch to **Agent** mode so that Copilot can use MCP tools.
 
-### 1.2 Check the available tools
-
-Open the Copilot tools picker and confirm that tools from `Dynatrace-MCP` are available and enabled.
-
-The exact tool names displayed can vary with the Dynatrace MCP version.
-
-### 1.3 Run a simple test
+### 1.2 Run a simple test
 
 Enter:
 
@@ -95,13 +89,13 @@ Enter:
 Use Dynatrace MCP to list the services with telemetry in the last hour.
 ```
 
-When Copilot requests permission to use a Dynatrace MCP tool, review the proposed action and allow it.
+When Copilot asks permission to run a Dynatrace MCP tool, review the proposed action and allow it. The tool call appears in the chat response, and that is your confirmation that MCP is connected.
 
 A successful response should contain data retrieved from the workshop environment.
 
 > If `@dynatrace` is recognised in your Copilot version, you may use it. If it is not recognised, use Agent mode and explicitly write "Use Dynatrace MCP".
 
-### 1.4 Scope the investigation to your service
+### 1.3 Scope the investigation to your service
 
 Run:
 
@@ -359,7 +353,7 @@ ai-chat-service-{YOUR_ATTENDEE_ID}.
 
 Include:
 - span count
-- earliest and latest timestamp
+- earliest and latest start_time
 - average span duration
 - maximum span duration
 - number of spans containing gen_ai.usage.input_tokens
@@ -384,7 +378,7 @@ Group the result by gen_ai.response.model and return:
 Show the DQL used.
 ```
 
-Depending on the instrumentation, the model may be recorded as `workshop-chat` or as `us.amazon.nova-micro-v1:0`.
+The model is recorded as `workshop-chat`, the LiteLLM alias for Amazon Nova Micro.
 
 ### 4.3 Identify unusual requests
 
@@ -394,7 +388,7 @@ Enter:
 Use Dynatrace MCP to find the 10 LLM spans with the highest input-token usage
 for ai-chat-service-{YOUR_ATTENDEE_ID} during the last hour.
 
-Return timestamp, span name, model, input tokens, output tokens, and duration.
+Return start_time, span name, model, input tokens, output tokens, and duration.
 Explain any visible pattern without assuming a cause that is not present in
 the telemetry.
 ```
@@ -640,7 +634,7 @@ Use Agent mode and enter:
 Use Dynatrace MCP to list the services with telemetry in the last hour.
 ```
 
-Also confirm that the Dynatrace MCP tools are enabled in the tools picker.
+If Copilot answers without calling a tool, open the chat's **Configure Tools** (wrench) button and check that the `Dynatrace-MCP` tools are enabled.
 
 </details>
 

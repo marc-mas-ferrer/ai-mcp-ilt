@@ -65,13 +65,13 @@ Use the credentials provided by your instructor.
 
 ![Open the AI Observability app](assets/images/open_ai_app.png)
 
-### 2.2 Explore service health
+### 2.2 Service explorer
 
-1. Select **Service Health** at the top of the app.
+1. Select **Explorer** at the top of the app.
 2. Select `ai-chat-service-{YOUR_ATTENDEE_ID}`.
-3. Select **Update**.
+3. Select **Apply**.
 
-![Explorer](assets/images/service_health.png)
+![Explorer](assets/images/ai-explorer.png)
 
 The explorer view provides an overview of traffic, latency, errors, token usage, and other available AI observability data.
 
@@ -81,8 +81,7 @@ The explorer view provides an overview of traffic, latency, errors, token usage,
 
 ### 3.1 Explore AI requests
 
-1. Select **Explorer** at the top of the AI Observability app.
-2. Select `ai-chat-service-{YOUR_ATTENDEE_ID}`.
+1. Still on **Explorer**, select `ai-chat-service-{YOUR_ATTENDEE_ID}`.
 
 This view provides more detailed information about requests made by your AI service.
 
@@ -92,9 +91,9 @@ This view provides more detailed information about requests made by your AI serv
 
 Select **View prompt details --> View trace** in the upper-right corner.
 
-![View prompt details](assets/images/view_prompt_details.png)
+![View prompt details](assets/images/view-prompt.png)
 
-![View traces](assets/images/view_traces.png)
+![View traces](assets/images/view-trace.png)
 
 The Distributed Tracing app opens and displays spans associated with the selected service.
 
@@ -194,10 +193,7 @@ Look for the following attributes when available:
 | `gen_ai.usage.input_tokens` | Number of input tokens processed |
 | `gen_ai.usage.output_tokens` | Number of output tokens generated |
 
-In this workshop, the application requests the LiteLLM alias `workshop-chat`, which routes to Amazon Nova Micro through Amazon Bedrock. Depending on the instrumentation, `gen_ai.response.model` may contain:
-
-- `workshop-chat`
-- `us.amazon.nova-micro-v1:0`
+In this workshop, the application requests the LiteLLM alias `workshop-chat`, and the gateway routes it to Amazon Nova Micro on Amazon Bedrock. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show `workshop-chat`. The Bedrock model name never appears in the telemetry, because the application only ever talks to LiteLLM.
 
 ### 4.3 View prompts and responses
 
@@ -298,7 +294,7 @@ The instructor has uploaded a lookup table containing the model limits used by t
 load "/lookups/ai/bedrock/model-max-tokens"
 ```
 
-The result should contain the model identifiers and their maximum input and output token values. The lookup contains both the LiteLLM alias and the underlying Bedrock model identifier, so the query works with either value recorded in `gen_ai.response.model`.
+The result should contain the model identifiers and their maximum input and output token values. The lookup is keyed on `workshop-chat`, the identifier your spans actually record.
 
 ### 7.3 Compare average token usage with model limits
 
@@ -344,10 +340,10 @@ This query:
 
 ## Step 8: Use Notebooks for AI Analysis
 
-### 8.1 Model usage distribution
+### 8.1 Confirm which model served the requests
 
 ```dql
-// Model usage distribution
+// Which model identifier do the LLM spans record?
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.response.model)
@@ -355,7 +351,7 @@ fetch spans
 | sort request_count desc
 ```
 
-Try changing the visualisation to **Pie**. This query also helps confirm which identifier the instrumentation records for the model.
+Expect a single row, `workshop-chat`: the workshop runs one model. The query is still worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
 
 ### 8.2 Average response time by operation
 
@@ -387,7 +383,7 @@ Run:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The table maps each model identifier to its input and output price per million tokens, and covers both the `workshop-chat` alias and the underlying Bedrock model identifier.
+The table maps each model identifier to its input and output price per million tokens, and is keyed on the `workshop-chat` alias that your spans record.
 
 At the time of writing, Amazon Nova Micro is priced at $0.035 per million input tokens and $0.14 per million output tokens. The values in the lookup are the ones your queries will actually use, and the instructor can update them without changing any query.
 
@@ -440,7 +436,7 @@ You will reuse this exact pattern in Lab 4, inside a workflow that runs it on a 
 fetch spans
 | filter service.name == "ai-chat-service-{YOUR_ATTENDEE_ID}"
 | filter isNotNull(gen_ai.usage.input_tokens)
-| fields timestamp, span.name, gen_ai.response.model,
+| fields start_time, span.name, gen_ai.response.model,
          gen_ai.usage.input_tokens, gen_ai.usage.output_tokens, duration
 | sort gen_ai.usage.input_tokens desc
 | limit 20
