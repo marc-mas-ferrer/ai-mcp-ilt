@@ -1,0 +1,14 @@
+{
+	"mcpServers": {
+		"Dynatrace-MCP": {
+			"type": "http",
+			"url": "https://ehd43494.apps.dynatrace.com/platform-reserved/mcp-gateway/v0.1/servers/dynatrace-mcp/mcp",
+			"tools": [
+				"*"
+			],
+			"headers": {
+				"Authorization": "Bearer ${env:DT_MCP_BEARER_TOKEN}"
+			}
+		}
+	}
+}

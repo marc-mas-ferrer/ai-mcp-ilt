@@ -65,7 +65,7 @@ MCP does not replace observability expertise. It helps you retrieve and analyse 
 
 ## How the Connection Is Configured
 
-Your Codespace is already set up. The file `.vscode/mcp.json` defines a server named `Dynatrace-MCP`, connected over SSE to the Dynatrace MCP gateway, and `configure.sh` inserted your platform token into its authorisation header during Lab 0.
+Your Codespace is already set up. The file `.mcp.json` defines a server named `Dynatrace-MCP`, connected over HTTP to the Dynatrace MCP gateway, and `configure.sh` inserted your platform token into its authorisation header during Lab 0.
 
 > **That file now contains a live credential.** Do not commit it, share it, or paste its contents into Copilot Chat. The version tracked in the repository holds a placeholder, and only your local copy has the real token.
 
@@ -593,11 +593,11 @@ Tick each item as you confirm it. If every box is checked, you are ready for Lab
 <details markdown="1">
 <summary>Dynatrace MCP does not appear in Copilot</summary>
 
-1. Confirm `.vscode/mcp.json` exists.
+1. Confirm `.mcp.json` exists.
 2. Validate it:
 
 ```bash
-python -m json.tool .vscode/mcp.json
+python -m json.tool .mcp.json
 ```
 
 3. Confirm that `DT_MCP_BEARER_TOKEN` has been configured without printing its value:
@@ -645,7 +645,7 @@ Confirm that:
 
 1. Lab 0's `configure.sh` completed successfully.
 2. The VS Code window was reloaded after configuration.
-3. The `Authorization` header in `.vscode/mcp.json` contains a token beginning with `dt0s16.` rather than an unreplaced placeholder.
+3. The `Authorization` header in `.mcp.json` contains a token beginning with `dt0s16.` rather than an unreplaced placeholder.
 4. The instructor-provided platform token has not expired or been replaced.
 
 If the header still contains a placeholder, rerun the personalised configuration command and reload the window.

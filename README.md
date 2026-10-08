@@ -137,7 +137,6 @@ Part of the observability stack is already in place before Lab 1.
 **Already configured in the repository:**
 
 - OpenTelemetry logging to Dynatrace, exported to `{DT_ENDPOINT}/v1/logs` with `Api-Token` authentication, using a batch processor and the resource attribute `service.name = ai-chat-service-{ATTENDEE_ID}`
-- FastAPI OpenTelemetry instrumentation, which creates the HTTP parent spans
 - `@workflow` and `@task` decorators on the RAG pipeline functions, imported conditionally
 
 **Added by the attendee in Lab 1:**
@@ -187,7 +186,7 @@ Do not commit `.env`.
 
    The Workshop ID is lower-cased and must be 2-31 characters of lowercase letters, numbers and hyphens. Email addresses are rejected.
 
-   The script writes the ID into `.env`, verifies that every required variable is present and not still `PASTE_HERE`, checks that `LLM_BASE_URL` ends with `/v1`, that `LLM_CHAT_MODEL` is `workshop-chat`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`, warns about unexpected token prefixes, exports the values into `~/.bashrc` for future terminals, and configures the authorization header in the workspace copy of `.vscode/mcp.json`. Secret values are validated but never printed.
+   The script writes the ID into `.env`, verifies that every required variable is present and not still `PASTE_HERE`, checks that `LLM_BASE_URL` ends with `/v1`, that `LLM_CHAT_MODEL` is `workshop-chat`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`, warns about unexpected token prefixes, exports the values into `~/.bashrc` for future terminals, and configures the authorization header in the workspace copy of `.mcp.json`. Secret values are validated but never printed.
 
 5. **Reload VS Code** with *Developer: Reload Window*, so Copilot and the MCP client pick up the new configuration.
 
@@ -205,11 +204,11 @@ If RAG initialisation fails at startup, the application stops with an error inst
 
 ## Dynatrace MCP (Lab 3)
 
-MCP is configured in `.vscode/mcp.json` as an SSE server named `Dynatrace-MCP`, pointing at the Dynatrace MCP gateway endpoint. The bearer token comes from `DT_MCP_BEARER_TOKEN` and is applied to the workspace copy by `configure.sh`.
+MCP is configured in `.mcp.json` as an HTTP server named `Dynatrace-MCP`, pointing at the Dynatrace MCP gateway endpoint. The bearer token comes from `DT_MCP_BEARER_TOKEN` and is applied to the workspace copy by `configure.sh`.
 
-`configure.sh` fails if `.vscode/mcp.json` is missing or has no authorization header, because Lab 3 cannot run without it.
+`configure.sh` fails if `.mcp.json` is missing or has no authorization header, because Lab 3 cannot run without it.
 
-Never paste a platform token directly into `.vscode/mcp.json`, and never commit one.
+Never paste a platform token directly into `.mcp.json`, and never commit one.
 
 ---
 
@@ -230,7 +229,7 @@ Attendees paste six values into `.env`. Everything else is derived.
 
 So your gateway must publish the model alias `workshop-chat`, and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
 
-`configure.sh` also fails outright if `.vscode/mcp.json` is missing or has no `Authorization` header, because Lab 3 cannot run without it.
+`configure.sh` also fails outright if `.mcp.json` is missing or has no `Authorization` header, because Lab 3 cannot run without it.
 
 Attendees choose their own Workshop ID, so nothing per-attendee needs preparing.
 
@@ -243,12 +242,11 @@ Rotate the gateway key and the Dynatrace tokens after each session, and prefer a
 ## Repository layout
 
 ```text
+.mcp.json                Dynatrace MCP server definition
 .devcontainer/
   devcontainer.json     Codespace definition
   setup.sh              Dependency install and guided .env creation
   configure.sh          Workshop ID, validation, env persistence, MCP token
-.vscode/
-  mcp.json              Dynatrace MCP server definition
 app/
   main.py               FastAPI service, RAG pipeline, local vectoriser
   knowledge/            Markdown knowledge base used for retrieval
@@ -264,11 +262,11 @@ docs/                   Published workshop guide
 
 **No traces in Dynatrace.** Traces appear only after Lab 1. Confirm that `traceloop-sdk` is uncommented and installed, that the Traceloop initialisation sits below the marker and after `load_dotenv()`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`.
 
-**Logs but no AI spans.** Logging and FastAPI instrumentation are configured independently, so logs can arrive before OpenLLMetry is initialised. That is expected before Lab 1.
+**Logs but no AI spans.** Logs can arrive before OpenLLMetry is initialised. That is expected before Lab 1.
 
 **Startup fails immediately.** RAG initialisation requires `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_CHAT_MODEL`. Re-run `configure.sh` and read its validation output.
 
-**MCP tools missing in Copilot.** Reload the VS Code window, check that `.vscode/mcp.json` is valid JSON, and confirm the token is present and unexpired.
+**MCP tools missing in Copilot.** Reload the VS Code window, check that `.mcp.json` is valid JSON, and confirm the token is present and unexpired.
 
 **Knowledge base looks empty after a restart.** The vector store is in memory and is rebuilt from `app/knowledge/` on every start. Anything added through `/documents` is lost when the process stops.
 

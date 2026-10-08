@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_DIR="$(git rev-parse --show-toplevel)"
 ENV_FILE="$REPO_DIR/.env"
-MCP_FILE="$REPO_DIR/.vscode/mcp.json"
+MCP_FILE="$REPO_DIR/.mcp.json"
 BASHRC_FILE="$HOME/.bashrc"
 ATTENDEE_ID_ARGUMENT=""
 
@@ -178,7 +178,7 @@ done
 
 if [ ! -f "$MCP_FILE" ]; then
   echo ""
-  echo "ERROR: .vscode/mcp.json was not found."
+  echo "ERROR: .mcp.json was not found."
   echo "Lab 3 cannot use Dynatrace MCP until this tracked file exists."
   exit 1
 fi
@@ -192,7 +192,7 @@ if grep -q '"Authorization"' "$MCP_FILE"; then
     "s/\"Authorization\"[[:space:]]*:[[:space:]]*\"Bearer[^\"]*\"/\"Authorization\": \"Bearer ${ESCAPED_MCP_TOKEN}\"/" \
     "$MCP_FILE"
 else
-  echo "ERROR: Authorization header was not found in .vscode/mcp.json."
+  echo "ERROR: Authorization header was not found in .mcp.json."
   exit 1
 fi
 

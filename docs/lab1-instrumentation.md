@@ -10,7 +10,7 @@ nav_order: 3
 
 In this lab, you will add OpenLLMetry instrumentation to the sample RAG application and send its AI traces to Dynatrace.
 
-The application already sends logs to Dynatrace and already creates spans for incoming HTTP requests. Both are configured in the repository. What is missing is the AI telemetry: prompts, completions, token usage, and the structure of the RAG pipeline. That is what you add here.
+The application already sends logs to Dynatrace. This is configured in the repository. What is missing is the AI telemetry: prompts, completions, token usage, and the structure of the RAG pipeline. That is what you add here.
 
 ## Learning Objectives
 
@@ -44,7 +44,7 @@ traceloop-sdk==0.50.1
 
 Save the file.
 
-> **Leave the other packages alone.** The OpenTelemetry packages above this section are already enabled, because they power the log export and HTTP spans that are running today. Do not comment them out, change their versions, or add extra OpenTelemetry packages. Use the version already written in the file.
+> **Leave the other packages alone.** The OpenTelemetry packages above this section are already enabled, because they power the log export that is running today. Do not comment them out, change their versions, or add extra OpenTelemetry packages. Use the version already written in the file.
 
 ### 1.2 Install the dependencies
 

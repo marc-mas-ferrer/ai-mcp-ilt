@@ -174,7 +174,7 @@ You enter the Workshop ID only once, in the guide. The command transfers that va
 
 ### 3.2 Review the validation output
 
-The script validates your Workshop ID, checks every value in `.env` against the formats described in Step 2.3, and confirms that `.vscode/mcp.json` exists, because Lab 3 depends on it.
+The script validates your Workshop ID, checks every value in `.env` against the formats described in Step 2.3, and confirms that `.mcp.json` exists, because Lab 3 depends on it.
 
 Successful output includes:
 
@@ -252,9 +252,9 @@ RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
 Uvicorn running on http://0.0.0.0:8000
 ```
 
-Two of these lines are worth noticing now, because they explain what you will and will not see in Dynatrace before Lab 1.
+One of these lines is worth noticing now, because it explains what you will and will not see in Dynatrace before Lab 1.
 
-Log export and FastAPI HTTP spans are already configured in this repository, so the application starts sending some data to Dynatrace immediately. What is missing is the AI-specific telemetry: prompts, completions, token usage and the RAG pipeline structure. You add that in Lab 1.
+Log export is already configured in this repository, so the application starts sending logs to Dynatrace immediately. What is missing is the AI-specific telemetry: prompts, completions, token usage and the RAG pipeline structure. You add that in Lab 1.
 
 The workshop uses:
 
@@ -463,7 +463,7 @@ The application stops on purpose if retrieval cannot be initialised, rather than
 <summary>Dynatrace MCP is not available later in Lab 3</summary>
 
 - Confirm that `DT_MCP_BEARER_TOKEN` was configured.
-- Confirm that `.vscode/mcp.json` exists.
+- Confirm that `.mcp.json` exists.
 - Rerun the personalised configuration command.
 - Run **Developer: Reload Window**.
 - Open Copilot Chat after the reload.

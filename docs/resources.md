@@ -154,7 +154,7 @@ if DT_ENDPOINT and DT_API_TOKEN:
 | Ingest authentication | `Authorization: Api-Token dt0c01...` |
 | MCP authentication | `Bearer dt0s16...`, a separate credential |
 
-Logging and FastAPI instrumentation are configured in the repository and run before Lab 1. The Traceloop initialisation above is what adds AI-specific telemetry.
+Logging is configured in the repository and runs before Lab 1. The Traceloop initialisation above is what adds AI-specific telemetry.
 
 ---
 
@@ -402,11 +402,11 @@ For a Classic access token, Dynatrace documents the required scopes for OpenLLMe
 | Environment variable | `DT_MCP_BEARER_TOKEN` |
 | Prefix | `dt0s16.` |
 | Authentication | `Bearer` |
-| Used by | `.vscode/mcp.json` |
+| Used by | `.mcp.json` |
 
 The MCP server tools each require their own scopes. The Data Analysis Agent needs `storage:buckets:read` plus a read scope for each data type you query, such as `storage:logs:read`. The Davis CoPilot tools need `davis-copilot:nl2dql:execute`, `davis-copilot:dql2nl:execute` and `davis-copilot:conversations:execute`. See the [Dynatrace MCP server documentation](https://docs.dynatrace.com/docs/dynatrace-intelligence/dynatrace-mcp).
 
-> `configure.sh` writes your MCP token directly into `.vscode/mcp.json`. That file contains a live credential after Lab 0. Do not commit it or share its contents.
+> `configure.sh` writes your MCP token directly into `.mcp.json`. That file contains a live credential after Lab 0. Do not commit it or share its contents.
 
 ---
 
@@ -509,7 +509,7 @@ Look for the document-retrieval task and the ChromaDB vector-search span instead
 
 ### Dynatrace MCP does not appear in Copilot
 
-1. `.vscode/mcp.json` exists and contains valid JSON.
+1. `.mcp.json` exists and contains valid JSON.
 2. The `Authorization` header contains a token beginning with `dt0s16.`, not an unreplaced placeholder.
 3. `configure.sh --attendee-id=YOUR_WORKSHOP_ID` completed successfully.
 4. VS Code was reloaded.
