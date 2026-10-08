@@ -132,9 +132,8 @@ if [[ "$LLM_BASE_URL" != */v1 ]]; then
   CONFIGURATION_ERROR=true
 fi
 
-if [ "$LLM_CHAT_MODEL" != "workshop-chat" ]; then
-  echo "INVALID: LLM_CHAT_MODEL must be workshop-chat"
-  CONFIGURATION_ERROR=true
+if [ "$LLM_CHAT_MODEL" = "workshop-chat" ]; then
+  echo "WARNING: LLM_CHAT_MODEL=workshop-chat is a deprecated alias. Use the value from Lab 0 (for example amazon-nova-lite)."
 fi
 
 if [[ "$DT_ENDPOINT" != */api/v2/otlp ]]; then
@@ -211,7 +210,7 @@ echo ""
 echo "LLM gateway:"
 echo "  $LLM_BASE_URL"
 echo ""
-echo "LLM model:"
+echo "LLM answer model (Amazon Bedrock via LiteLLM):"
 echo "  $LLM_CHAT_MODEL"
 echo ""
 echo "Dynatrace OTLP endpoint:"

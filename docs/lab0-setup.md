@@ -89,7 +89,7 @@ Your instructor provides one shared credential block containing:
 
 - The LiteLLM gateway URL
 - The LiteLLM workshop key
-- The LiteLLM model alias
+- The LiteLLM model alias of the default answer model
 - The Dynatrace OTLP endpoint
 - The Dynatrace ingest token
 - The Dynatrace MCP platform token
@@ -136,7 +136,7 @@ When you are done, no `PASTE_HERE` value should remain.
 | `ATTENDEE_ID` | Filled by `configure.sh` | Creates your attendee-specific service name |
 | `LLM_BASE_URL` | Ends with `/v1` | OpenAI-compatible LiteLLM gateway |
 | `LLM_API_KEY` | Starts with `sk-workshop-` | Authenticates to the workshop gateway |
-| `LLM_CHAT_MODEL` | `workshop-chat` | LiteLLM model alias |
+| `LLM_CHAT_MODEL` | `amazon-nova-lite` | LiteLLM alias of the default answer model |
 | `DT_ENDPOINT` | Ends with `/api/v2/otlp` | Dynatrace OTLP ingest endpoint |
 | `DT_API_TOKEN` | Starts with `dt0c01.` | Sends traces and logs to Dynatrace |
 | `DT_MCP_BEARER_TOKEN` | Starts with `dt0s16.` | Allows GitHub Copilot to use Dynatrace MCP |
@@ -247,7 +247,9 @@ RAG initialized successfully for attendee: {YOUR_ATTENDEE_ID}
    Vectoriser: local-hashing-384
    Knowledge files: 7
    Documents indexed: 43
-   Chat model: workshop-chat
+   Answer model: amazon-nova-lite
+   Intent model: amazon-nova-micro
+   Selectable models: amazon-nova-micro, amazon-nova-lite, amazon-nova-pro
 
 Uvicorn running on http://0.0.0.0:8000
 ```
@@ -258,7 +260,7 @@ Log export is already configured in this repository, so the application starts s
 
 The workshop uses:
 
-- Amazon Nova Micro through LiteLLM for chat completions
+- Amazon Bedrock models (Nova Micro, Nova Lite and Nova Pro) through a LiteLLM gateway for chat completions. Use the **Model** dropdown in the chat UI to choose which one answers
 - Deterministic local vectorisation for workshop retrieval
 - ChromaDB for local vector search
 

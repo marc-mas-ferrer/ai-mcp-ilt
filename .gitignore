@@ -129,3 +129,5 @@ temp/
 
 # Workflow files
 dynatrace-config/
+# Local working notes (never pushed)
+*.local.md

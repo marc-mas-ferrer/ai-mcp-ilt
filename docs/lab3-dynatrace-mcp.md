@@ -378,7 +378,7 @@ Group the result by gen_ai.response.model and return:
 Show the DQL used.
 ```
 
-The model is recorded as `workshop-chat`, the LiteLLM alias for Amazon Nova Micro.
+Each model is recorded by its LiteLLM alias, for example `amazon-nova-micro` or `amazon-nova-lite`, both served by Amazon Bedrock.
 
 ### 4.3 Identify unusual requests
 

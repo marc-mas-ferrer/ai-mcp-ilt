@@ -117,7 +117,6 @@ def check_retrieval(store) -> tuple[int, dict]:
 def check_llm(contexts: dict) -> int:
     """Ask the real model with and without RAG and flag problems."""
     from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_openai import ChatOpenAI
 
     missing_config = [
         n for n, v in {
@@ -129,10 +128,8 @@ def check_llm(contexts: dict) -> int:
         print(f"\n--llm skipped, missing: {', '.join(missing_config)}")
         return 0
 
-    rag_llm = ChatOpenAI(model=main.LLM_CHAT_MODEL, api_key=main.LLM_API_KEY,
-                         base_url=main.LLM_BASE_URL, temperature=0.2)
-    plain_llm = ChatOpenAI(model=main.LLM_CHAT_MODEL, api_key=main.LLM_API_KEY,
-                           base_url=main.LLM_BASE_URL, temperature=0.7)
+    rag_llm = main.make_chat_model(main.LLM_CHAT_MODEL, 0.2)
+    plain_llm = main.make_chat_model(main.LLM_CHAT_MODEL, 0.7)
 
     failures = 0
     runs = [(q, f, b, run) for q, f, b in CASES for run in range(1, REPEATS + 1)]

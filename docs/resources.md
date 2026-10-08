@@ -40,8 +40,8 @@ Use this page as a reference for the technologies, configuration, DQL queries, a
 
 | Technology | Purpose | Link |
 |---|---|---|
-| Amazon Bedrock | Hosts Amazon Nova Micro | [AWS Bedrock docs](https://docs.aws.amazon.com/bedrock/) |
-| Amazon Nova | Language model used by the workshop | [Amazon Nova docs](https://docs.aws.amazon.com/nova/) |
+| Amazon Bedrock | Hosts the Amazon Nova models | [AWS Bedrock docs](https://docs.aws.amazon.com/bedrock/) |
+| Amazon Nova | Amazon language models used by the workshop | [Amazon Nova docs](https://docs.aws.amazon.com/nova/) |
 | LiteLLM | OpenAI-compatible gateway to Bedrock | [LiteLLM docs](https://docs.litellm.ai/) |
 | LangChain | Application orchestration | [LangChain docs](https://docs.langchain.com/) |
 | ChromaDB | Local vector store | [Chroma docs](https://docs.trychroma.com/) |
@@ -70,7 +70,7 @@ GitHub Codespace
                                                 │
                                                 ▼
                                       Amazon Bedrock
-                                      Amazon Nova Micro
+                                      Nova Micro / Lite / Pro
 ```
 
 Retrieval vectors are generated in-process, so only chat requests leave the Codespace for the model gateway. There is no embedding-model API call and no embedding token cost.
@@ -90,7 +90,7 @@ ATTENDEE_ID=your-workshop-id
 # LiteLLM gateway
 LLM_BASE_URL=http://INSTRUCTOR_PROVIDED_HOST:4000/v1
 LLM_API_KEY=sk-workshop-INSTRUCTOR_PROVIDED_VALUE
-LLM_CHAT_MODEL=workshop-chat
+LLM_CHAT_MODEL=amazon-nova-lite
 
 # Dynatrace OTLP ingestion
 DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
@@ -162,19 +162,28 @@ Logging is configured in the repository and runs before Lab 1. The Traceloop ini
 
 | Component | Workshop configuration |
 |---|---|
-| LiteLLM model alias | `workshop-chat` |
-| Bedrock inference profile | `us.amazon.nova-micro-v1:0` |
-| Maximum input tokens | `128000` |
-| Maximum output tokens | `5000` |
-| Input price | `$0.035` per 1 million tokens |
-| Output price | `$0.14` per 1 million tokens |
+| Models | See the model table below |
 | Retrieval vectoriser | Local deterministic hashing, 384 dimensions |
 | Vector store | ChromaDB, in memory |
-| Chunk size and overlap | 500 characters, 50 overlap |
-| Retrieved chunks | Up to 3 |
-| LLM calls per RAG request | 2 (intent classification and response generation) |
+| Chunk size and overlap | Sections split at 1,500 characters, 150 overlap |
+| Retrieved context | Best-matching topic (all its sections) plus up to 2 related sections |
+| LLM calls per RAG request | 2 (intent classification on `amazon-nova-micro`, response generation on the selected model) |
 
-Spans record `gen_ai.response.model` as `workshop-chat`, the alias the gateway returns. The Bedrock inference profile never appears in telemetry.
+### Models
+
+| Model alias (`gen_ai.request.model`) | Amazon Bedrock model | Used for | Input / output price per 1M tokens |
+|---|---|---|---|
+| `amazon-nova-micro` | Amazon Nova Micro | Intent classification (always); selectable | $0.035 / $0.14 |
+| `amazon-nova-lite` | Amazon Nova Lite | Default answer model | $0.06 / $0.24 |
+| `amazon-nova-pro` | Amazon Nova Pro | Selectable | $0.80 / $3.20 |
+
+| LiteLLM alias | Bedrock inference profile |
+|---|---|
+| `amazon-nova-micro` | `us.amazon.nova-micro-v1:0` |
+| `amazon-nova-lite` | `us.amazon.nova-lite-v1:0` |
+| `amazon-nova-pro` | `us.amazon.nova-pro-v1:0` |
+
+Spans record the LiteLLM alias in `gen_ai.request.model` and `gen_ai.response.model`, never the Bedrock inference profile. LLM spans are named `ChatBedrockViaLiteLLM.chat` and carry `gen_ai.system = AWS`. The client speaks the OpenAI chat-completions protocol to LiteLLM, which translates it for Amazon Bedrock. The deprecated alias `workshop-chat` still routes to Nova Micro.
 
 ---
 
@@ -468,7 +477,7 @@ curl -s http://localhost:8000/chat \
 
 ### The application cannot reach the LLM gateway
 
-Check that `LLM_BASE_URL` ends with `/v1`, `LLM_API_KEY` matches the instructor-provided key, `LLM_CHAT_MODEL` is `workshop-chat`, and that no placeholder value such as `INSTRUCTOR_GATEWAY` or `PASTE_HERE` remains in `.env`.
+Check that `LLM_BASE_URL` ends with `/v1`, `LLM_API_KEY` matches the instructor-provided key, `LLM_CHAT_MODEL` is a model alias from the table above (for example `amazon-nova-lite`), and that no placeholder value such as `INSTRUCTOR_GATEWAY` or `PASTE_HERE` remains in `.env`.
 
 ### LiteLLM returns `No connected db`
 

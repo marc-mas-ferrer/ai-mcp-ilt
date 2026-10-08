@@ -63,7 +63,8 @@ GitHub Codespace
   ├── FastAPI OTel instrumentation ────► Dynatrace
   └── OpenLLMetry / Traceloop (added in Lab 1) ──► Dynatrace
   │
-  └── Chat completions ───────────────► LiteLLM gateway ──► Amazon Bedrock (Amazon Nova Micro)
+  └── Chat completions ───────────────► LiteLLM gateway ──► Amazon Bedrock
+                                         (Nova Micro, Nova Lite, Nova Pro)
 ```
 
 Only chat completions leave the Codespace for the model gateway. Retrieval vectors are produced locally, so there is no embedding-model API call and no embedding-provider span.
@@ -159,12 +160,12 @@ All configuration lives in a single `.env` file at the repository root.
 | `ATTENDEE_ID` | Written by `configure.sh`; drives the service and collection names |
 | `LLM_BASE_URL` | LiteLLM gateway base URL; must end with `/v1` |
 | `LLM_API_KEY` | Workshop gateway key |
-| `LLM_CHAT_MODEL` | Must be `workshop-chat` |
+| `LLM_CHAT_MODEL` | Default answer model, a LiteLLM alias such as `amazon-nova-lite` |
 | `DT_ENDPOINT` | Dynatrace OTLP endpoint; must end with `/api/v2/otlp` |
 | `DT_API_TOKEN` | Dynatrace ingest token for traces and logs |
 | `DT_MCP_BEARER_TOKEN` | Dynatrace platform token used by the MCP server in Lab 3 |
 
-Optional overrides: `APP_HOST` (default `0.0.0.0`) and `APP_PORT` (default `8000`).
+Optional overrides: `APP_HOST` (default `0.0.0.0`), `APP_PORT` (default `8000`), `LLM_INTENT_MODEL` (default `amazon-nova-micro`), `LLM_AVAILABLE_MODELS` (models offered in the UI).
 
 Do not commit `.env`.
 
@@ -186,7 +187,7 @@ Do not commit `.env`.
 
    The Workshop ID is lower-cased and must be 2-31 characters of lowercase letters, numbers and hyphens. Email addresses are rejected.
 
-   The script writes the ID into `.env`, verifies that every required variable is present and not still `PASTE_HERE`, checks that `LLM_BASE_URL` ends with `/v1`, that `LLM_CHAT_MODEL` is `workshop-chat`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`, warns about unexpected token prefixes, exports the values into `~/.bashrc` for future terminals, and configures the authorization header in the workspace copy of `.mcp.json`. Secret values are validated but never printed.
+   The script writes the ID into `.env`, verifies that every required variable is present and not still `PASTE_HERE`, checks that `LLM_BASE_URL` ends with `/v1`, and that `DT_ENDPOINT` ends with `/api/v2/otlp`, warns about unexpected token prefixes, exports the values into `~/.bashrc` for future terminals, and configures the authorization header in the workspace copy of `.mcp.json`. Secret values are validated but never printed.
 
 5. **Reload VS Code** with *Developer: Reload Window*, so Copilot and the MCP client pick up the new configuration.
 
@@ -222,12 +223,12 @@ Attendees paste six values into `.env`. Everything else is derived.
 |---|---|
 | `LLM_BASE_URL` | Must end with `/v1` |
 | `LLM_API_KEY` | Warns if it does not start with `sk-workshop-` |
-| `LLM_CHAT_MODEL` | Must be exactly `workshop-chat`; any other value is rejected |
+| `LLM_CHAT_MODEL` | Must be set; warns if it is the deprecated `workshop-chat` alias |
 | `DT_ENDPOINT` | Must end with `/api/v2/otlp` |
 | `DT_API_TOKEN` | Warns if it does not start with `dt0c01.` |
 | `DT_MCP_BEARER_TOKEN` | Warns if it does not start with `dt0s16.` |
 
-So your gateway must publish the model alias `workshop-chat`, and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
+So your gateway must publish the model aliases listed in Lab 0 (for example `amazon-nova-lite`), and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
 
 `configure.sh` also fails outright if `.mcp.json` is missing or has no `Authorization` header, because Lab 3 cannot run without it.
 

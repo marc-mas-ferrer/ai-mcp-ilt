@@ -14,7 +14,7 @@ A large system prompt is sent on every request. Retrieved context adds input tok
 
 ## Prompt caching
 
-Providers can cache a repeated prompt prefix, charging less for the cached part. Caching generally needs a stable prefix of at least 1,024 tokens, which is why the app keeps a long, stable system prompt at the start of the prompt and puts the changing context after it.
+Providers can cache a repeated prompt prefix, charging less for the cached part. Some providers do this automatically for long prompts, while Amazon Bedrock only caches when the request marks a cache point. This workshop app does not mark cache points, so expect gen_ai.usage.cache_read_input_tokens to be 0. The app still keeps a long, stable system prompt at the start and puts the changing context after it, which is the layout caching needs.
 
 ## Debugging a poor RAG answer
 

@@ -180,20 +180,24 @@ The exact names of automatically generated spans may vary depending on the versi
 
 ### 4.2 Examine an LLM span
 
-Open the LLM child span (e.g. `ChatOpenAI.chat`) under `analyze_query_intent.task` or `generate_response.task`.
+Open the LLM child span (`ChatBedrockViaLiteLLM.chat`) under `analyze_query_intent.task` or `generate_response.task`.
 
 Look for the following attributes when available:
 
 | Attribute | Description |
 |---|---|
-| `gen_ai.system` | The AI system or provider recorded by the instrumentation |
+| `gen_ai.system` | The provider recorded by the instrumentation: `AWS` (Amazon Bedrock) |
 | `gen_ai.request.model` | The model requested by the application |
-| `gen_ai.response.model` | The model identifier recorded in the response |
+| `gen_ai.response.model` | The model alias returned by the gateway |
 | `gen_ai.request.temperature` | The configured temperature |
 | `gen_ai.usage.input_tokens` | Number of input tokens processed |
 | `gen_ai.usage.output_tokens` | Number of output tokens generated |
 
-In this workshop, the application requests the LiteLLM alias `workshop-chat`, and the gateway routes it to Amazon Nova Micro on Amazon Bedrock. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show `workshop-chat`. The Bedrock model name never appears in the telemetry, because the application only ever talks to LiteLLM.
+In this workshop the application requests a LiteLLM alias such as `amazon-nova-micro` or `amazon-nova-lite`, and the gateway routes it to the matching Amazon Bedrock model. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show it. The Bedrock inference profile never appears in the telemetry, because the application only ever talks to LiteLLM.
+
+Compare the two LLM spans in one trace. The span under `analyze_query_intent.task` uses `amazon-nova-micro`, the cheap classifier. The span under `generate_response.task` uses the model selected in the **Model** dropdown, `amazon-nova-lite` by default.
+
+> **Why is it called `ChatBedrockViaLiteLLM`?** LiteLLM exposes Amazon Bedrock through the OpenAI chat-completions protocol, so the application uses LangChain's OpenAI-compatible client. The workshop app wraps it in a small class named `ChatBedrockViaLiteLLM`. OpenLLMetry names the span after the client class and derives the provider from it, so the trace says Amazon Bedrock (`gen_ai.system = AWS`) rather than "openai". Without that class you would see `ChatOpenAI.chat` and `openai`, even though no OpenAI service is involved.
 
 ### 4.3 View prompts and responses
 
@@ -273,11 +277,13 @@ Consider:
 
 ## Step 7: Analyse Token Utilisation
 
-Amazon Nova Micro supports the following limits in this workshop configuration:
+The workshop models have these limits (the same values are in the lookup table below):
 
-| Model | Maximum input tokens | Maximum output tokens |
+| Model alias | Maximum input tokens | Maximum output tokens |
 |---|---:|---:|
-| Amazon Nova Micro | 128,000 | 5,000 |
+| `amazon-nova-micro` | 128,000 | 10,000 |
+| `amazon-nova-lite` | 300,000 | 10,000 |
+| `amazon-nova-pro` | 300,000 | 10,000 |
 
 ### 7.1 Create a Notebook
 
@@ -294,7 +300,7 @@ The instructor has uploaded a lookup table containing the model limits used by t
 load "/lookups/ai/bedrock/model-max-tokens"
 ```
 
-The result should contain the model identifiers and their maximum input and output token values. The lookup is keyed on `workshop-chat`, the identifier your spans actually record.
+The result should contain the model identifiers and their maximum input and output token values. The lookup is keyed on the model alias, the identifier your spans actually record (for example `amazon-nova-lite`).
 
 ### 7.3 Compare average token usage with model limits
 
@@ -351,7 +357,9 @@ fetch spans
 | sort request_count desc
 ```
 
-Expect a single row, `workshop-chat`: the workshop runs one model. The query is still worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
+Expect one row per model you used: `amazon-nova-micro` for the intent step and `amazon-nova-lite` (or whichever model you selected) for the answers. The query is worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
+
+> **Try it:** pick a different model in the chat UI's **Model** dropdown, ask the same question, and run the query again. A new row appears.
 
 ### 8.2 Average response time by operation
 
@@ -375,7 +383,7 @@ Try changing the visualisation to **Categorical**. Look for the operations with 
 
 ### 9.1 Inspect the pricing lookup table
 
-The workshop uses Amazon Nova Micro through Amazon Bedrock. Rather than hardcoding prices into every query, the current pricing is maintained in a Grail lookup table.
+The workshop uses several Amazon Bedrock models through LiteLLM. Rather than hardcoding prices into every query, the current pricing is maintained in a Grail lookup table.
 
 Run:
 
@@ -383,9 +391,9 @@ Run:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The table maps each model identifier to its input and output price per million tokens, and is keyed on the `workshop-chat` alias that your spans record.
+The table maps each model identifier to its input and output price per million tokens, and is keyed on the model alias that your spans record.
 
-At the time of writing, Amazon Nova Micro is priced at $0.035 per million input tokens and $0.14 per million output tokens. The values in the lookup are the ones your queries will actually use, and the instructor can update them without changing any query.
+At the time of writing, Amazon Nova Micro costs $0.035 per million input tokens and $0.14 per million output tokens, Nova Lite $0.06 and $0.24, and Nova Pro $0.80 and $3.20. The values in the lookup are the ones your queries will actually use, and the instructor can update them without changing any query.
 
 Local vectorisation has no hosted-model token cost.
 
@@ -417,7 +425,7 @@ fetch spans
 | sort estimated_cost_usd desc
 ```
 
-The estimated value will be very small, because Nova Micro is inexpensive and the workshop generates limited traffic. The important lesson is the calculation pattern:
+The estimated values will be small, because the workshop generates limited traffic, but the models differ by an order of magnitude or more per token. Send the same question to each model and compare `estimated_cost_usd`. The important lesson is the calculation pattern:
 
 1. Collect token usage
 2. Group usage by model
@@ -553,7 +561,7 @@ Then load the lookup:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-Confirm that the value in `gen_ai.response.model` exists in the lookup table's `model` field, and that your account can read Grail lookup files.
+Confirm that every value in `gen_ai.response.model` exists in the lookup table's `model` field, and that your account can read Grail lookup files.
 
 </details>
 

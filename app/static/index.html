@@ -648,6 +648,16 @@
             color: #fff;
         }
 
+        .model-select {
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
         /* Custom Checkbox */
         .toggle-option input[type="checkbox"] {
             appearance: none;
@@ -920,6 +930,10 @@
                             <input type="checkbox" id="useRag" checked>
                             <span>Use Knowledge Base (RAG)</span>
                         </label>
+                        <label class="toggle-option" title="LiteLLM model alias that answers the question (served by Amazon Bedrock)">
+                            <span>Model:</span>
+                            <select id="modelSelect" class="model-select"></select>
+                        </label>
                         <label class="toggle-option error-toggle" title="Forces errors to demonstrate Dynatrace tracing capabilities">
                             <input type="checkbox" id="simulateErrors">
                             <span>🐛 Simulate Errors</span>
@@ -947,6 +961,7 @@
         const emptyState = document.getElementById('emptyState');
         const useRagCheckbox = document.getElementById('useRag');
         const simulateErrorsCheckbox = document.getElementById('simulateErrors');
+        const modelSelect = document.getElementById('modelSelect');
         const attendeeIdEl = document.getElementById('attendeeId');
         const serviceNameEl = document.getElementById('serviceName');
         const statusDot = document.getElementById('statusDot');
@@ -961,6 +976,7 @@
                 const data = await response.json();
                 attendeeIdEl.textContent = data.attendee_id;
                 serviceNameEl.textContent = data.service_name;
+                renderModels(data.available_models || [], data.chat_model);
                 statusDot.className = 'status-dot connected';
                 statusText.textContent = 'Connected';
             } catch (error) {
@@ -968,6 +984,19 @@
                 statusDot.className = 'status-dot disconnected';
                 statusText.textContent = 'Disconnected';
             }
+        }
+
+        // Fill the model dropdown
+        function renderModels(models, defaultModel) {
+            const selected = modelSelect.value || defaultModel;
+            modelSelect.innerHTML = '';
+            models.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                modelSelect.appendChild(option);
+            });
+            modelSelect.value = selected;
         }
 
         // Send message
@@ -999,6 +1028,7 @@
                     },
                     body: JSON.stringify({
                         message: message,
+                        model: modelSelect.value,
                         use_rag: useRagCheckbox.checked,
                         simulate_errors: simulateErrorsCheckbox.checked
                     }),
@@ -1014,7 +1044,7 @@
 
                 const data = await response.json();
                 removeTypingIndicator(loadingId);
-                addMessage(data.response, 'assistant', data.sources);
+                addMessage(data.response, 'assistant', data.sources, data.model);
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1038,7 +1068,7 @@
         }
 
         // Add message to chat
-        function addMessage(content, type, sources = null) {
+        function addMessage(content, type, sources = null, model = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
 
@@ -1052,6 +1082,10 @@
                     ? `<div class="answer-badge grounded">✅ Grounded in ${sources.length} workshop source${sources.length === 1 ? '' : 's'}</div>`
                     : `<div class="answer-badge general">⚠️ General model knowledge, not checked against workshop material</div>`;
             }
+
+            const modelHtml = (type === 'assistant' && model)
+                ? `<div class="answer-badge general">🤖 Answered by ${escapeHtml(model)}</div>`
+                : '';
 
             let sourcesHtml = '';
             if (sources && sources.length > 0) {
@@ -1075,6 +1109,7 @@
                 <div class="message-avatar">${avatar}</div>
                 <div class="message-content">
                     ${badgeHtml}
+                    ${modelHtml}
                     ${renderedContent}
                     ${sourcesHtml}
                 </div>

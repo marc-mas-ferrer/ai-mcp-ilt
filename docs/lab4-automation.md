@@ -85,7 +85,7 @@ Open a Dynatrace Notebook and run:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The result should include a pricing record for `workshop-chat`, the model identifier your spans record.
+The result should include a pricing record for each model alias your spans record, such as `amazon-nova-micro` and `amazon-nova-lite`.
 
 The lookup fields should be:
 
@@ -187,11 +187,11 @@ Use the task's test or run option.
 
 The result should contain at least one record with the recorded model, request count, input and output tokens, total tokens, and estimated cost.
 
-The estimated cost will be very small. This is expected because Amazon Nova Micro is inexpensive and the workshop generates limited traffic.
+The estimated cost will be very small. This is expected because the Nova models are inexpensive and the workshop generates limited traffic.
 
 ### 3.3 Understand the result
 
-The query groups by `gen_ai.response.model`, so you get one row per model. The workshop uses a single model, `workshop-chat`, so expect one row. If you later add more models, the condition and notification in the next steps read only the first row (the highest token usage), which is worth remembering when you interpret the result.
+The query groups by `gen_ai.response.model`, so you get one row per model. Each request uses at least two models (`amazon-nova-micro` for intent classification and the answer model), so expect two or more rows. The condition and notification in the next steps read only the first row, the model with the highest token usage, which is worth remembering when you interpret the result.
 
 ---
 
@@ -266,7 +266,7 @@ Use the following content:
 AI usage notification
 
 Service: ai-chat-service-{YOUR_ATTENDEE_ID}
-Model: {{ result("get_token_usage").records[0]["gen_ai.response.model"] }}
+Top model by token usage: {{ result("get_token_usage").records[0]["gen_ai.response.model"] }}
 
 Token usage:
 - Requests: {{ result("get_token_usage").records[0].request_count }}
@@ -495,7 +495,7 @@ Then inspect the lookup:
 load "/lookups/ai/bedrock/model-costs"
 ```
 
-The value in `gen_ai.response.model` must exist in the lookup table's `model` field. The expected value is `workshop-chat`.
+Every value in `gen_ai.response.model` must exist in the lookup table's `model` field. Expected values are the model aliases, such as `amazon-nova-micro` and `amazon-nova-lite`.
 
 If a different value is recorded, the instructor must add that exact value to the lookup table.
 
@@ -584,7 +584,7 @@ If your spans record more than one identifier, either add a row for each result 
 <details markdown="1">
 <summary>The estimated cost appears as zero</summary>
 
-Nova Micro costs are very low, and the workshop produces few tokens. The value may be rounded when displayed.
+The Nova models cost very little per token, and the workshop produces few tokens. The value may be rounded when displayed.
 
 Inspect the raw `estimated_cost_usd` value or display more decimal places in the notification.
 

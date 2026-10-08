@@ -10,7 +10,7 @@ The workshop application is a FastAPI service that answers questions with Retrie
 
 ## Pipeline and spans
 
-The pipeline is a single workflow, rag_chat_pipeline, with four tasks. analyze_query_intent makes a small LLM call that classifies the question. retrieve_documents vectorises the question and searches ChromaDB for the most relevant chunks. generate_context formats the retrieved chunks into a context string. generate_response makes the main LLM call with the context in the system prompt. After Lab 1 each step appears as a span in Dynatrace under the FastAPI request span.
+The pipeline is a single workflow, rag_chat_pipeline, with four tasks. analyze_query_intent makes a small LLM call that classifies the question. retrieve_documents vectorises the question and searches ChromaDB for the most relevant chunks. generate_context formats the retrieved chunks into a context string. generate_response makes the main LLM call with the retrieved context next to the question. After Lab 1 each step appears as a span in Dynatrace under the FastAPI request span.
 
 ## Local vectorisation
 
@@ -18,7 +18,7 @@ Retrieval vectors are produced by a local, deterministic hashing function, Local
 
 ## Models and configuration
 
-Chat completions go through LiteLLM, which routes the workshop-chat model to Amazon Nova Micro. Important settings are LLM_BASE_URL, LLM_API_KEY and LLM_CHAT_MODEL for the model, and DT_ENDPOINT (ending in /api/v2/otlp) and DT_API_TOKEN for Dynatrace. ATTENDEE_ID is used in the service name ai-chat-service-ATTENDEE_ID so each attendee can find their own traces.
+The chat models are Amazon Bedrock models reached through a LiteLLM gateway, which speaks the OpenAI chat-completions protocol. Each model has a LiteLLM alias: amazon-nova-micro (Amazon Nova Micro), amazon-nova-lite (Amazon Nova Lite, the default answer model) and amazon-nova-pro (Amazon Nova Pro, the most capable and most expensive). The analyze_query_intent task always uses amazon-nova-micro; generate_response uses the model chosen in the chat UI dropdown. The alias is what spans record in gen_ai.request.model and gen_ai.response.model. LLM spans are named ChatBedrockViaLiteLLM.chat and report gen_ai.system as AWS, because the app uses an OpenAI-compatible client class for Amazon Bedrock. Important settings are LLM_BASE_URL, LLM_API_KEY and LLM_CHAT_MODEL (the default answer model), optionally LLM_INTENT_MODEL and LLM_AVAILABLE_MODELS, and DT_ENDPOINT (ending in /api/v2/otlp) and DT_API_TOKEN for Dynatrace. ATTENDEE_ID is used in the service name ai-chat-service-ATTENDEE_ID so each attendee can find their own traces.
 
 ## Finding your traces in Dynatrace
 

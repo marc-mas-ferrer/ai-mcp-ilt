@@ -4,7 +4,8 @@ Dynatrace AI Observability Workshop
 Sample RAG (Retrieval Augmented Generation) Service
 
 This is a simple AI-powered Q&A service that uses:
-- Amazon Nova Micro through an OpenAI-compatible LiteLLM gateway
+- Amazon Bedrock models (Nova Micro, Lite and Pro) through an
+  OpenAI-compatible LiteLLM gateway
 - Deterministic local vectorization for document retrieval
 - ChromaDB for vector storage and similarity search
 - LangChain for orchestration
@@ -130,9 +131,25 @@ APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
 
 # LLM gateway configuration (LiteLLM -> Amazon Bedrock)
+# Model names are LiteLLM aliases such as "amazon-nova-lite"; the gateway maps
+# each alias to a Bedrock inference profile.
 LLM_BASE_URL        = os.getenv("LLM_BASE_URL")
 LLM_API_KEY         = os.getenv("LLM_API_KEY")
-LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "workshop-chat")
+LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "amazon-nova-lite")      # default answer model
+LLM_INTENT_MODEL    = os.getenv("LLM_INTENT_MODEL", "amazon-nova-micro")   # query classifier
+
+
+def _csv(value: str) -> list:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+# Models the chat UI may select. The default answer model is always included.
+LLM_AVAILABLE_MODELS = _csv(os.getenv(
+    "LLM_AVAILABLE_MODELS",
+    "amazon-nova-micro,amazon-nova-lite,amazon-nova-pro",
+))
+if LLM_CHAT_MODEL not in LLM_AVAILABLE_MODELS:
+    LLM_AVAILABLE_MODELS.insert(0, LLM_CHAT_MODEL)
 
 
 
@@ -206,6 +223,7 @@ if os.path.exists(STATIC_DIR):
 class ChatRequest(BaseModel):
     """Request model for chat endpoint"""
     message: str
+    model: Optional[str] = None   # LiteLLM alias; defaults to LLM_CHAT_MODEL
     use_rag: bool = True
     simulate_errors: bool = False
 
@@ -214,6 +232,7 @@ class ChatResponse(BaseModel):
     response: str
     attendee_id: str
     sources: Optional[List[str]] = None
+    model: Optional[str] = None
 
 class DocumentRequest(BaseModel):
     """Request model for adding documents"""
@@ -447,7 +466,42 @@ class LocalHashingEmbeddings(Embeddings):
 embeddings = None
 vectorstore = None
 retriever = None
-llm = None
+llm = None          # default answer model
+intent_llm = None   # cheap model that classifies the question
+
+
+class ChatBedrockViaLiteLLM(ChatOpenAI):
+    """
+    Chat client for Amazon Bedrock models served through a LiteLLM gateway.
+
+    LiteLLM speaks the OpenAI chat-completions protocol, so the transport is
+    LangChain's ChatOpenAI. This subclass exists so the telemetry says what is
+    really happening: OpenLLMetry names the span after the class
+    (ChatBedrockViaLiteLLM.chat) and takes the provider from the class name and
+    LangChain's ls_provider, so Dynatrace shows an AWS provider, not "openai".
+    """
+
+    def _get_ls_params(self, stop=None, **kwargs):
+        params = super()._get_ls_params(stop=stop, **kwargs)
+        params["ls_provider"] = "amazon_bedrock"
+        return params
+
+
+_model_clients: dict = {}
+
+
+def make_chat_model(model: str, temperature: float = 0) -> ChatBedrockViaLiteLLM:
+    """Return a cached chat client for one LiteLLM model alias."""
+    key = (model, temperature)
+    if key not in _model_clients:
+        _model_clients[key] = ChatBedrockViaLiteLLM(
+            model=model,
+            api_key=LLM_API_KEY,
+            base_url=LLM_BASE_URL,
+            temperature=temperature,
+        )
+    return _model_clients[key]
+
 
 def format_docs(docs):
     """Format retrieved documents into a single string, labelled by source"""
@@ -530,7 +584,7 @@ SIMULATED_ERRORS = [
     },
     {
         "exception": LLMResponseError,
-        "message": "Content filter triggered: Response blocked due to policy violation (category: hate_speech, severity: medium)",
+        "message": "Guardrail intervened: Response blocked by Amazon Bedrock Guardrails (policy: content filter, category: hate, confidence: medium)",
         "log_level": "warning",
         "error_code": "CONTENT_FILTER_BLOCK"
     },
@@ -678,7 +732,11 @@ def build_environment_block() -> str:
         "[Source: Your workshop environment]\n"
         "Facts about the attendee's own running app:\n"
         f"- Service name in Dynatrace: {service}\n"
-        f"- Chat model: {LLM_CHAT_MODEL}\n"
+        f"- Answer model (default): {LLM_CHAT_MODEL}\n"
+        f"- Intent classification model: {LLM_INTENT_MODEL}\n"
+        f"- Models you can select in the chat UI: {', '.join(LLM_AVAILABLE_MODELS)}\n"
+        "- All models run on Amazon Bedrock, reached through the LiteLLM gateway; "
+        "LLM spans are named ChatBedrockViaLiteLLM.chat\n"
         "- To find this app's traces in Dynatrace, run this DQL:\n"
         "fetch spans\n"
         f'| filter service.name == "{service}"\n'
@@ -701,8 +759,9 @@ def generate_context(docs: list) -> str:
 
 # Static system prompt: behaviour and rules only. The facts come from the
 # retrieved reference material, which is sent with the question (see
-# RAG_USER_TEMPLATE). Keeping this prompt stable and over 1,024 tokens also lets
-# the provider cache it between requests.
+# RAG_USER_TEMPLATE). Keeping this prompt stable keeps requests comparable between
+# models. Amazon Bedrock only caches a prompt prefix when the request marks a
+# cache point, which this app does not do, so no prompt caching is expected.
 RAG_SYSTEM_PROMPT = """You are an expert AI assistant for the Dynatrace AI Observability Workshop.
 You help intermediate developers and SREs who are new to observability, and you
 specialise in Dynatrace, OpenTelemetry, OpenLLMetry (Traceloop) and AI/LLM observability.
@@ -833,12 +892,13 @@ RAG_USER_TEMPLATE = """Reference material:
 Question: {question}"""
 
 @task(name="generate_response")
-def generate_response(question: str, context: str) -> str:
+def generate_response(question: str, context: str, model: Optional[str] = None) -> str:
     """
     Step 3: Generate LLM response with context
     This generates the main LLM completion span
     """
-    if not llm:
+    answer_llm = make_chat_model(model, 0) if model else llm
+    if not answer_llm:
         raise ValueError("LLM not initialized")
     
     # Use chat messages format for cleaner trace capture
@@ -853,7 +913,7 @@ def generate_response(question: str, context: str) -> str:
         ))
     ]
     
-    response = llm.invoke(messages)
+    response = answer_llm.invoke(messages)
     return response.content
 
 def summarize_sources(docs: list) -> list:
@@ -876,7 +936,7 @@ def analyze_query_intent(query: str) -> dict:
     Step 5: Quick LLM call to classify query intent
     This adds an additional LLM span for richer traces
     """
-    if not llm:
+    if not intent_llm:
         return {"intent": "unknown", "confidence": 0}
     
     # Use messages format for consistent trace capture
@@ -888,13 +948,13 @@ def analyze_query_intent(query: str) -> dict:
     
     Query: {query}"""
     
-    result = llm.invoke([HumanMessage(content=classification_prompt)])
+    result = intent_llm.invoke([HumanMessage(content=classification_prompt)])
     return {"intent": result.content.strip().lower(), "query": query}
 
 
 def initialize_rag():
     """Initialise the local RAG components and LiteLLM chat client."""
-    global embeddings, vectorstore, retriever, llm
+    global embeddings, vectorstore, retriever, llm, intent_llm
 
     try:
         missing = [
@@ -903,6 +963,7 @@ def initialize_rag():
                 "LLM_BASE_URL": LLM_BASE_URL,
                 "LLM_API_KEY": LLM_API_KEY,
                 "LLM_CHAT_MODEL": LLM_CHAT_MODEL,
+                "LLM_INTENT_MODEL": LLM_INTENT_MODEL,
             }.items()
             if not value
         ]
@@ -938,14 +999,10 @@ def initialize_rag():
         # by the health check. Pipeline retrieval goes through select_documents.
         retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
-        # Initialise the OpenAI-compatible LiteLLM chat client.
-        # LiteLLM routes workshop-chat to Amazon Nova Micro.
-        llm = ChatOpenAI(
-            model=LLM_CHAT_MODEL,
-            api_key=LLM_API_KEY,
-            base_url=LLM_BASE_URL,
-            temperature=0,
-        )
+        # Chat clients for Amazon Bedrock models via the LiteLLM gateway.
+        # The intent classifier and the answer model are separate models.
+        llm = make_chat_model(LLM_CHAT_MODEL, 0)
+        intent_llm = make_chat_model(LLM_INTENT_MODEL, 0)
 
         logger.info(
             "RAG system initialized successfully",
@@ -953,6 +1010,7 @@ def initialize_rag():
                 "attendee_id": ATTENDEE_ID,
                 "embedding_model": "local-hashing-384",
                 "chat_model": LLM_CHAT_MODEL,
+                "intent_model": LLM_INTENT_MODEL,
                 "document_count": file_count,
                 "document_chunks": len(docs)
             }
@@ -965,7 +1023,9 @@ def initialize_rag():
         print("   Vectoriser: local-hashing-384")
         print(f"   Knowledge files: {file_count}")
         print(f"   Documents indexed: {len(docs)}")
-        print(f"   Chat model: {LLM_CHAT_MODEL}")
+        print(f"   Answer model: {LLM_CHAT_MODEL}")
+        print(f"   Intent model: {LLM_INTENT_MODEL}")
+        print(f"   Selectable models: {', '.join(LLM_AVAILABLE_MODELS)}")
 
         return True
 
@@ -1009,7 +1069,7 @@ async def health_check():
     )
 
 @workflow(name="rag_chat_pipeline")
-def process_rag_chat(message: str) -> tuple:
+def process_rag_chat(message: str, model: Optional[str] = None) -> tuple:
     """
     RAG Chat Pipeline - Groups all LLM calls under a single parent trace
     """
@@ -1023,7 +1083,7 @@ def process_rag_chat(message: str) -> tuple:
     context = generate_context(retrieved_docs)
     
     # Step 4: Generate response with context (generates LLM span)
-    response_text = generate_response(message, context)
+    response_text = generate_response(message, context, model)
     
     # Step 5: Summarize sources for response
     sources = summarize_sources(retrieved_docs)
@@ -1053,6 +1113,13 @@ async def chat(request: ChatRequest):
     if not request.message.strip():
         logger.warning("Empty message rejected")
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    model = request.model or LLM_CHAT_MODEL
+    if model not in LLM_AVAILABLE_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown model '{model}'. Available: {', '.join(LLM_AVAILABLE_MODELS)}"
+        )
     
     # Add user's original question as a trace attribute for better visibility in Dynatrace
     # This captures the actual user input separately from the full RAG prompt
@@ -1062,7 +1129,8 @@ async def chat(request: ChatRequest):
         Traceloop.set_association_properties({
             "user.question": request.message,
             "use_rag": str(request.use_rag),
-            "simulate_errors": str(request.simulate_errors)
+            "simulate_errors": str(request.simulate_errors),
+            "llm.selected_model": model
         })
     except Exception:
         pass  # Traceloop not initialized, skip
@@ -1081,7 +1149,7 @@ async def chat(request: ChatRequest):
     try:
         if request.use_rag and retriever and llm:
             # Use the workflow-decorated function to group all operations
-            response_text, sources = process_rag_chat(request.message)
+            response_text, sources = process_rag_chat(request.message, model)
             logger.info("RAG chat response generated", extra={
                 "response_length": len(response_text),
                 "sources_count": len(sources) if sources else 0,
@@ -1089,12 +1157,7 @@ async def chat(request: ChatRequest):
             })
         else:
             # Direct LLM call (single LLM span)
-            direct_llm = ChatOpenAI(
-                model=LLM_CHAT_MODEL,
-                api_key=LLM_API_KEY,
-                base_url=LLM_BASE_URL,
-                temperature=0.7,
-            )
+            direct_llm = make_chat_model(model, 0.7)
 
             response = direct_llm.invoke(request.message)
             response_text = response.content
@@ -1107,7 +1170,8 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             response=response_text,
             attendee_id=ATTENDEE_ID,
-            sources=sources
+            sources=sources,
+            model=model
         )
         
     except Exception as e:
@@ -1146,6 +1210,8 @@ async def get_info():
         "rag_initialized": retriever is not None and llm is not None,
         "vectoriser": "local-hashing-384",
         "chat_model": LLM_CHAT_MODEL,
+        "intent_model": LLM_INTENT_MODEL,
+        "available_models": LLM_AVAILABLE_MODELS,
         "documents_loaded": KNOWLEDGE_FILE_COUNT,
         "endpoints": [
             {"path": "/", "method": "GET", "description": "Service info"},
