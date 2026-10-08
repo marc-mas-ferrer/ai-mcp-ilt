@@ -195,7 +195,7 @@ Look for the following attributes when available:
 
 In this workshop the application requests a LiteLLM alias such as `amazon-nova-micro` or `amazon-nova-lite`, and the gateway routes it to the matching Amazon Bedrock model. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show it. The Bedrock inference profile never appears in the telemetry, because the application only ever talks to LiteLLM.
 
-Compare the two LLM spans in one trace. The span under `analyze_query_intent.task` uses `amazon-nova-micro`, the cheap classifier. The span under `generate_response.task` uses the model selected in the **Model** dropdown, `amazon-nova-lite` by default.
+Compare the two LLM spans in one trace. The span under `analyze_query_intent.task` always uses `amazon-nova-micro`, the cheap classifier. The span under `generate_response.task` uses the model selected in the **Model** dropdown, `amazon-nova-lite` unless you changed it. If you select `amazon-nova-micro`, both spans show the same model.
 
 > **Why is it called `ChatBedrockViaLiteLLM`?** LiteLLM exposes Amazon Bedrock through the OpenAI chat-completions protocol, so the application uses LangChain's OpenAI-compatible client. The workshop app wraps it in a small class named `ChatBedrockViaLiteLLM`. OpenLLMetry names the span after the client class and derives the provider from it, so the trace says Amazon Bedrock (`gen_ai.system = AWS`) rather than "openai". Without that class you would see `ChatOpenAI.chat` and `openai`, even though no OpenAI service is involved.
 
@@ -357,9 +357,9 @@ fetch spans
 | sort request_count desc
 ```
 
-Expect one row per model you used: `amazon-nova-micro` for the intent step and `amazon-nova-lite` (or whichever model you selected) for the answers. The query is worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
+Expect one row per model that served a request. With **Use Knowledge Base (RAG)** on, `amazon-nova-micro` always appears, because it runs the intent step, together with the model you selected for the answers (`amazon-nova-lite` unless you changed the dropdown). With RAG off there is no intent step, so only the selected model appears. If you selected `amazon-nova-micro`, you see a single row. The query is worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
 
-> **Try it:** pick a different model in the chat UI's **Model** dropdown, ask the same question, and run the query again. A new row appears.
+> **Try it:** pick a different model in the chat UI's **Model** dropdown, ask the same question, and run the query again. If you pick `amazon-nova-pro`, a new row appears. If you pick `amazon-nova-micro`, no new row appears because Micro is already there from the intent step; only its request count goes up.
 
 ### 8.2 Average response time by operation
 

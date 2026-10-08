@@ -648,14 +648,87 @@
             color: #fff;
         }
 
-        .model-select {
-            background: rgba(0,0,0,0.3);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 4px;
-            padding: 2px 6px;
+        /* Model picker: custom dropdown in the same style as the rest of the UI */
+        .model-picker {
+            position: relative;
+            margin-left: auto;
             font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .model-picker-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font: inherit;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-picker-button:hover,
+        .model-picker.open .model-picker-button {
+            color: #fff;
+            border-color: var(--dt-purple);
+            box-shadow: 0 0 0 3px rgba(122, 48, 255, 0.15);
+        }
+
+        .model-picker-button .model-name {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .model-picker-button .chevron {
+            width: 10px;
+            height: 10px;
+            transition: transform 0.2s;
+        }
+
+        .model-picker.open .chevron {
+            transform: rotate(180deg);
+        }
+
+        .model-picker-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            bottom: calc(100% + 8px);
+            min-width: 100%;
+            padding: 6px;
+            list-style: none;
+            background: rgba(18, 18, 25, 0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-highlight);
+            border-radius: 10px;
+            box-shadow: var(--shadow-md);
+            z-index: 20;
+        }
+
+        .model-picker.open .model-picker-menu {
+            display: block;
+        }
+
+        .model-picker-menu li {
+            padding: 7px 12px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .model-picker-menu li:hover {
+            background: rgba(122, 48, 255, 0.18);
+            color: #fff;
+        }
+
+        .model-picker-menu li.selected {
+            color: #fff;
+            background: rgba(122, 48, 255, 0.3);
         }
 
         /* Custom Checkbox */
@@ -930,14 +1003,19 @@
                             <input type="checkbox" id="useRag" checked>
                             <span>Use Knowledge Base (RAG)</span>
                         </label>
-                        <label class="toggle-option" title="LiteLLM model alias that answers the question (served by Amazon Bedrock)">
-                            <span>Model:</span>
-                            <select id="modelSelect" class="model-select"></select>
-                        </label>
                         <label class="toggle-option error-toggle" title="Forces errors to demonstrate Dynatrace tracing capabilities">
                             <input type="checkbox" id="simulateErrors">
                             <span>🐛 Simulate Errors</span>
                         </label>
+                        <div class="model-picker" id="modelPicker" title="Model that answers the question (Amazon Bedrock via LiteLLM)">
+                            <input type="hidden" id="modelSelect">
+                            <button type="button" class="model-picker-button" id="modelButton" aria-haspopup="listbox" aria-expanded="false">
+                                <span>Model:</span>
+                                <span class="model-name" id="modelName"></span>
+                                <svg class="chevron" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,3.5 5,7 8.5,3.5"></polyline></svg>
+                            </button>
+                            <ul class="model-picker-menu" id="modelMenu" role="listbox"></ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -961,7 +1039,11 @@
         const emptyState = document.getElementById('emptyState');
         const useRagCheckbox = document.getElementById('useRag');
         const simulateErrorsCheckbox = document.getElementById('simulateErrors');
-        const modelSelect = document.getElementById('modelSelect');
+        const modelSelect = document.getElementById('modelSelect');  // hidden input holding the chosen model
+        const modelPicker = document.getElementById('modelPicker');
+        const modelButton = document.getElementById('modelButton');
+        const modelMenu = document.getElementById('modelMenu');
+        const modelNameEl = document.getElementById('modelName');
         const attendeeIdEl = document.getElementById('attendeeId');
         const serviceNameEl = document.getElementById('serviceName');
         const statusDot = document.getElementById('statusDot');
@@ -986,18 +1068,45 @@
             }
         }
 
-        // Fill the model dropdown
+        // Fill the model picker
         function renderModels(models, defaultModel) {
-            const selected = modelSelect.value || defaultModel;
-            modelSelect.innerHTML = '';
+            const chosen = models.includes(modelSelect.value) ? modelSelect.value : defaultModel;
+            modelMenu.innerHTML = '';
             models.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                option.textContent = name;
-                modelSelect.appendChild(option);
+                const item = document.createElement('li');
+                item.textContent = name;
+                item.setAttribute('role', 'option');
+                item.addEventListener('click', () => {
+                    setModel(name);
+                    closeModelMenu();
+                });
+                modelMenu.appendChild(item);
             });
-            modelSelect.value = selected;
+            setModel(chosen);
         }
+
+        function setModel(name) {
+            modelSelect.value = name;
+            modelNameEl.textContent = name;
+            modelMenu.querySelectorAll('li').forEach(li => {
+                li.classList.toggle('selected', li.textContent === name);
+            });
+        }
+
+        function closeModelMenu() {
+            modelPicker.classList.remove('open');
+            modelButton.setAttribute('aria-expanded', 'false');
+        }
+
+        modelButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const open = modelPicker.classList.toggle('open');
+            modelButton.setAttribute('aria-expanded', String(open));
+        });
+        document.addEventListener('click', closeModelMenu);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeModelMenu();
+        });
 
         // Send message
         async function sendMessage() {

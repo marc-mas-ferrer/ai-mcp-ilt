@@ -75,7 +75,7 @@ How do I add OpenLLMetry to this app?
 Explain how Grail supports observability analysis.
 ```
 
-Each RAG request generates two LLM calls, giving the workflow enough token data to analyse.
+Each RAG request generates two LLM calls (intent classification and the answer), giving the workflow enough token data to analyse. Keep **Use Knowledge Base (RAG)** switched on while you do this.
 
 ### 1.2 Verify the pricing lookup table
 
@@ -191,7 +191,7 @@ The estimated cost will be very small. This is expected because the Nova models 
 
 ### 3.3 Understand the result
 
-The query groups by `gen_ai.response.model`, so you get one row per model. Each request uses at least two models (`amazon-nova-micro` for intent classification and the answer model), so expect two or more rows. The condition and notification in the next steps read only the first row, the model with the highest token usage, which is worth remembering when you interpret the result.
+The query groups by `gen_ai.response.model`, so you get one row per model. With RAG on, every request makes an intent call on `amazon-nova-micro` plus an answer call on the selected model, so expect one row if you left the dropdown on `amazon-nova-micro` and two or more rows otherwise (by default `amazon-nova-micro` and `amazon-nova-lite`). The condition and notification in the next steps read only the first row, the model with the highest token usage, which is worth remembering when you interpret the result.
 
 ---
 
