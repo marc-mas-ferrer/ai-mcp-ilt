@@ -134,3 +134,6 @@ dynatrace-config/
 
 #migration
 /token-migration
+
+#claude temp migration
+TEMP-CLAUDE-API-MIGRATION.md
