@@ -133,7 +133,7 @@ if [[ "$LLM_BASE_URL" != */v1 ]]; then
 fi
 
 if [ "$LLM_CHAT_MODEL" = "workshop-chat" ]; then
-  echo "WARNING: LLM_CHAT_MODEL=workshop-chat is a deprecated alias. Use the value from Lab 0 (for example amazon-nova-lite)."
+  echo "WARNING: LLM_CHAT_MODEL=workshop-chat is a deprecated alias. Use the value from Lab 0 (for example claude-haiku-5-5)."
 fi
 
 if [[ "$DT_ENDPOINT" != */api/v2/otlp ]]; then
@@ -210,7 +210,7 @@ echo ""
 echo "LLM gateway:"
 echo "  $LLM_BASE_URL"
 echo ""
-echo "LLM answer model (Amazon Bedrock via LiteLLM):"
+echo "LLM answer model (Anthropic Claude via LiteLLM):"
 echo "  $LLM_CHAT_MODEL"
 echo ""
 echo "Dynatrace OTLP endpoint:"

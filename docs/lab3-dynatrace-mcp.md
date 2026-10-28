@@ -264,7 +264,7 @@ Every request fails while the toggle is enabled, so a handful of messages is eno
 
 Because the scenario is chosen at random, you will not see every error code in your own data. Work with the ones that appear.
 
-These are intentionally generated workshop errors. They do not indicate a failure in Amazon Bedrock, LiteLLM, ChromaDB, or Dynatrace.
+These are intentionally generated workshop errors. They do not indicate a failure in the Claude API, LiteLLM, ChromaDB, or Dynatrace.
 
 ### 3.2 Find the generated errors
 
@@ -378,7 +378,7 @@ Group the result by gen_ai.response.model and return:
 Show the DQL used.
 ```
 
-Each model is recorded by its LiteLLM alias, for example `amazon-nova-micro` or `amazon-nova-lite`, both served by Amazon Bedrock.
+Each model is recorded by its LiteLLM alias, for example `claude-haiku-5-5` or `claude-haiku-4-5`, both served by Anthropic.
 
 ### 4.3 Identify unusual requests
 

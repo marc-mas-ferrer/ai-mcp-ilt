@@ -63,8 +63,8 @@ GitHub Codespace
   ├── FastAPI OTel instrumentation ────► Dynatrace
   └── OpenLLMetry / Traceloop (added in Lab 1) ──► Dynatrace
   │
-  └── Chat completions ───────────────► LiteLLM gateway ──► Amazon Bedrock
-                                         (Nova Micro, Nova Lite, Nova Pro)
+  └── Chat completions ───────────────► LiteLLM gateway ──► Claude API (Anthropic)
+                                         (Claude Haiku 5.5, Claude Haiku 4.5)
 ```
 
 Only chat completions leave the Codespace for the model gateway. Retrieval vectors are produced locally, so there is no embedding-model API call and no embedding-provider span.
@@ -160,12 +160,12 @@ All configuration lives in a single `.env` file at the repository root.
 | `ATTENDEE_ID` | Written by `configure.sh`; drives the service and collection names |
 | `LLM_BASE_URL` | LiteLLM gateway base URL; must end with `/v1` |
 | `LLM_API_KEY` | Workshop gateway key |
-| `LLM_CHAT_MODEL` | Default answer model, a LiteLLM alias such as `amazon-nova-lite` |
+| `LLM_CHAT_MODEL` | Default answer model, a LiteLLM alias such as `claude-haiku-5-5` |
 | `DT_ENDPOINT` | Dynatrace OTLP endpoint; must end with `/api/v2/otlp` |
 | `DT_API_TOKEN` | Dynatrace ingest token for traces and logs |
 | `DT_MCP_BEARER_TOKEN` | Dynatrace platform token used by the MCP server in Lab 3 |
 
-Optional overrides: `APP_HOST` (default `0.0.0.0`), `APP_PORT` (default `8000`), `LLM_INTENT_MODEL` (default `amazon-nova-micro`), `LLM_AVAILABLE_MODELS` (models offered in the UI).
+Optional overrides: `APP_HOST` (default `0.0.0.0`), `APP_PORT` (default `8000`), `LLM_INTENT_MODEL` (default `claude-haiku-5-5`), `LLM_AVAILABLE_MODELS` (models offered in the UI).
 
 Do not commit `.env`.
 
@@ -228,7 +228,7 @@ Attendees paste six values into `.env`. Everything else is derived.
 | `DT_API_TOKEN` | Warns if it does not start with `dt0c01.` |
 | `DT_MCP_BEARER_TOKEN` | Warns if it does not start with `dt0s16.` |
 
-So your gateway must publish the model aliases listed in Lab 0 (for example `amazon-nova-lite`), and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
+So your gateway must publish the model aliases listed in Lab 0 (for example `claude-haiku-5-5`), and your Dynatrace endpoint must be the OTLP path rather than the environment root. The prefix checks are warnings, not failures, so a mistyped token will pass configuration and fail later at runtime.
 
 `configure.sh` also fails outright if `.mcp.json` is missing or has no `Authorization` header, because Lab 3 cannot run without it.
 

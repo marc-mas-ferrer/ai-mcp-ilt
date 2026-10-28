@@ -37,7 +37,7 @@ docs/                # Jekyll GitHub Pages - lab guides (lab0-lab4)
 
 ### LLM client and telemetry
 
-Chat models are Amazon Bedrock models behind a LiteLLM gateway (OpenAI-compatible protocol). `ChatBedrockViaLiteLLM` (a `ChatOpenAI` subclass in `app/main.py`) makes OpenLLMetry name LLM spans `ChatBedrockViaLiteLLM.chat` and set `gen_ai.system` to `AWS`. Create clients only through `make_chat_model()`. The intent task uses `intent_llm`; answers use the model selected per request.
+Chat models are Anthropic Claude models (Haiku 5.5, Haiku 4.5) behind a LiteLLM gateway (OpenAI-compatible protocol). This is a temporary setup for the 2026-10-29 session; the Bedrock version is tagged `pre-claude-api-2026-10-29`. `ChatAnthropicViaLiteLLM` (a `ChatOpenAI` subclass in `app/main.py`) makes OpenLLMetry name LLM spans `ChatAnthropicViaLiteLLM.chat` and set `gen_ai.system` to `Anthropic`; the class name must contain "anthropic" for that detection to work. Create clients only through `make_chat_model()`. The intent task uses `intent_llm`; answers use the model selected per request.
 
 ### RAG Pipeline Flow (`app/main.py`)
 
@@ -60,7 +60,7 @@ knowledge files.
 | Variable | Required Value | Notes |
 |----------|----------------|-------|
 | `LLM_BASE_URL` | Must end with `/v1` | LiteLLM gateway |
-| `LLM_CHAT_MODEL` | `amazon-nova-lite` | Default answer model. LiteLLM alias for a Bedrock model; `LLM_INTENT_MODEL` (default `amazon-nova-micro`) classifies queries, `LLM_AVAILABLE_MODELS` feeds the UI dropdown |
+| `LLM_CHAT_MODEL` | `claude-haiku-5-5` | Default answer model. LiteLLM alias for a Claude model; `LLM_INTENT_MODEL` (default `claude-haiku-5-5`) classifies queries, `LLM_AVAILABLE_MODELS` feeds the UI dropdown |
 | `DT_ENDPOINT` | Must end with `/api/v2/otlp` | Common mistake to omit suffix |
 
 ## Code Patterns
@@ -132,7 +132,7 @@ Used in Lab 3 for practicing error investigation with Dynatrace MCP.
 |-------|-------|-----|
 | Chat returns "Failed to send message" on long responses | Default fetch timeout | UI has 2-min AbortController timeout |
 | Edits to `app/knowledge/` or `main.py` have no effect | Auto-reload is disabled | Stop and restart the app |
-| No prompt caching (`gen_ai.usage.cache_read_input_tokens` is 0) | Amazon Bedrock caches only when a request marks a cache point; the app does not | Expected. Add explicit cache points if caching becomes a lab topic |
+| No prompt caching (`gen_ai.usage.cache_read_input_tokens` is 0) | The Claude API caches only when a request marks a cache point; the app does not | Expected. Add explicit cache points if caching becomes a lab topic |
 | Deprecation warning on startup | `@app.on_event("startup")` | Use `lifespan` context manager |
 
 ## Protected Files

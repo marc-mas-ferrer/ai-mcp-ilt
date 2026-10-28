@@ -82,10 +82,10 @@ Each RAG request generates two LLM calls (intent classification and the answer),
 Open a Dynatrace Notebook and run:
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
-The result should include a pricing record for each model alias your spans record, such as `amazon-nova-micro` and `amazon-nova-lite`.
+The result should include a pricing record for each model alias your spans record, such as `claude-haiku-5-5` and `claude-haiku-4-5`.
 
 The lookup fields should be:
 
@@ -155,7 +155,7 @@ fetch spans
     by: {gen_ai.response.model}
 | fieldsAdd total_tokens =
     total_input_tokens + total_output_tokens
-| lookup [load "/lookups/ai/bedrock/model-costs"],
+| lookup [load "/lookups/ai/llm/model-costs"],
     sourceField:gen_ai.response.model,
     lookupField:model,
     prefix:"pricing."
@@ -187,11 +187,11 @@ Use the the workflow's run option.
 
 The result should contain at least one record with the recorded model, request count, input and output tokens, total tokens, and estimated cost.
 
-The estimated cost will be very small. This is expected because the Nova models are inexpensive and the workshop generates limited traffic.
+The estimated cost will be very small. This is expected because Claude Haiku 5.5 is inexpensive and the workshop generates limited traffic.
 
 ### 3.3 Understand the result
 
-The query groups by `gen_ai.response.model`, so you get one row per model. With RAG on, every request makes an intent call on `amazon-nova-micro` plus an answer call on the selected model, so expect one row if you left the dropdown on `amazon-nova-micro` and two or more rows otherwise (by default `amazon-nova-micro` and `amazon-nova-lite`). The condition and notification in the next steps read only the first row, the model with the highest token usage, which is worth remembering when you interpret the result.
+The query groups by `gen_ai.response.model`, so you get one row per model. With RAG on, every request makes an intent call on `claude-haiku-5-5` plus an answer call on the selected model, so expect one row if you left the dropdown on the default `claude-haiku-5-5` and two rows if you also used `claude-haiku-4-5`. The condition and notification in the next steps read only the first row, the model with the highest token usage, which is worth remembering when you interpret the result.
 
 ---
 
@@ -463,10 +463,10 @@ fetch spans
 Then inspect the lookup:
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
-Every value in `gen_ai.response.model` must exist in the lookup table's `model` field. Expected values are the model aliases, such as `amazon-nova-micro` and `amazon-nova-lite`.
+Every value in `gen_ai.response.model` must exist in the lookup table's `model` field. Expected values are the model aliases, such as `claude-haiku-5-5` and `claude-haiku-4-5`.
 
 If a different value is recorded, the instructor must add that exact value to the lookup table.
 
@@ -477,7 +477,7 @@ If a different value is recorded, the instructor must add that exact value to th
 
 Confirm that:
 
-1. The path is exactly `/lookups/ai/bedrock/model-costs`
+1. The path is exactly `/lookups/ai/llm/model-costs`
 2. Your workshop account can read Grail lookup files
 3. The lookup was uploaded successfully
 4. The table is available in the same Dynatrace environment
@@ -555,7 +555,7 @@ If your spans record more than one identifier, either add a row for each result 
 <details markdown="1">
 <summary>The estimated cost appears as zero</summary>
 
-The Nova models cost very little per token, and the workshop produces few tokens. The value may be rounded when displayed.
+Claude Haiku 5.5 costs very little per token, and the workshop produces few tokens. The value may be rounded when displayed.
 
 Inspect the raw `estimated_cost_usd` value or display more decimal places in the notification.
 

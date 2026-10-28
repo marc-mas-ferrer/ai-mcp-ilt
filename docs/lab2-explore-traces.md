@@ -180,24 +180,24 @@ The exact names of automatically generated spans may vary depending on the versi
 
 ### 4.2 Examine an LLM span
 
-Open the LLM child span (`ChatBedrockViaLiteLLM.chat`) under `analyze_query_intent.task` or `generate_response.task`.
+Open the LLM child span (`ChatAnthropicViaLiteLLM.chat`) under `analyze_query_intent.task` or `generate_response.task`.
 
 Look for the following attributes when available:
 
 | Attribute | Description |
 |---|---|
-| `gen_ai.system` | The provider recorded by the instrumentation: `AWS` (Amazon Bedrock) |
+| `gen_ai.system` | The provider recorded by the instrumentation: `Anthropic` |
 | `gen_ai.request.model` | The model requested by the application |
 | `gen_ai.response.model` | The model alias returned by the gateway |
-| `gen_ai.request.temperature` | The configured temperature |
+| `gen_ai.request.temperature` | The temperature the application requested. The gateway does not forward it to Claude Haiku 5.5, which accepts only its default temperature |
 | `gen_ai.usage.input_tokens` | Number of input tokens processed |
 | `gen_ai.usage.output_tokens` | Number of output tokens generated |
 
-In this workshop the application requests a LiteLLM alias such as `amazon-nova-micro` or `amazon-nova-lite`, and the gateway routes it to the matching Amazon Bedrock model. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show it. The Bedrock inference profile never appears in the telemetry, because the application only ever talks to LiteLLM.
+In this workshop the application requests a LiteLLM alias such as `claude-haiku-5-5` or `claude-haiku-4-5`, and the gateway routes it to the matching Anthropic Claude model. The gateway answers with the alias, so both `gen_ai.request.model` and `gen_ai.response.model` show it. The application only ever talks to LiteLLM, never directly to Anthropic.
 
-Compare the two LLM spans in one trace. The span under `analyze_query_intent.task` always uses `amazon-nova-micro`, the cheap classifier. The span under `generate_response.task` uses the model selected in the **Model** dropdown, `amazon-nova-lite` unless you changed it. If you select `amazon-nova-micro`, both spans show the same model.
+Compare the two LLM spans in one trace. The span under `analyze_query_intent.task` always uses `claude-haiku-5-5`, the cheap classifier. The span under `generate_response.task` uses the model selected in the **Model** dropdown, which is also `claude-haiku-5-5` unless you changed it, so by default both spans show the same model. Select `claude-haiku-4-5` to see two different models in one trace.
 
-> **Why is it called `ChatBedrockViaLiteLLM`?** LiteLLM exposes Amazon Bedrock through the OpenAI chat-completions protocol, so the application uses LangChain's OpenAI-compatible client. The workshop app wraps it in a small class named `ChatBedrockViaLiteLLM`. OpenLLMetry names the span after the client class and derives the provider from it, so the trace says Amazon Bedrock (`gen_ai.system = AWS`) rather than "openai". Without that class you would see `ChatOpenAI.chat` and `openai`, even though no OpenAI service is involved.
+> **Why is it called `ChatAnthropicViaLiteLLM`?** LiteLLM exposes the Claude models through the OpenAI chat-completions protocol, so the application uses LangChain's OpenAI-compatible client. The workshop app wraps it in a small class named `ChatAnthropicViaLiteLLM`. OpenLLMetry names the span after the client class and derives the provider from it, so the trace says Anthropic (`gen_ai.system = Anthropic`) rather than "openai". Without that class you would see `ChatOpenAI.chat` and `openai`, even though no OpenAI service is involved.
 
 ### 4.3 View prompts and responses
 
@@ -224,7 +224,7 @@ Compare the short intent-classification call with the final response-generation 
 
 ## Step 5: Understand Local Retrieval
 
-The application converts each question into a vector inside the Codespace, using a deterministic hashing function rather than a trained embedding model. Nothing is sent to LiteLLM or Amazon Bedrock for this step.
+The application converts each question into a vector inside the Codespace, using a deterministic hashing function rather than a trained embedding model. Nothing is sent to LiteLLM or Anthropic for this step.
 
 ### 5.1 Examine document retrieval
 
@@ -281,9 +281,8 @@ The workshop models have these limits (the same values are in the lookup table b
 
 | Model alias | Maximum input tokens | Maximum output tokens |
 |---|---:|---:|
-| `amazon-nova-micro` | 128,000 | 10,000 |
-| `amazon-nova-lite` | 300,000 | 10,000 |
-| `amazon-nova-pro` | 300,000 | 10,000 |
+| `claude-haiku-5-5` | 1,000,000 | 128,000 |
+| `claude-haiku-4-5` | 200,000 | 64,000 |
 
 ### 7.1 Create a Notebook
 
@@ -297,10 +296,10 @@ The workshop models have these limits (the same values are in the lookup table b
 The instructor has uploaded a lookup table containing the model limits used by this workshop. Run:
 
 ```dql
-load "/lookups/ai/bedrock/model-max-tokens"
+load "/lookups/ai/llm/model-max-tokens"
 ```
 
-The result should contain the model identifiers and their maximum input and output token values. The lookup is keyed on the model alias, the identifier your spans actually record (for example `amazon-nova-lite`).
+The result should contain the model identifiers and their maximum input and output token values. The lookup is keyed on the model alias, the identifier your spans actually record (for example `claude-haiku-5-5`).
 
 ### 7.3 Compare average token usage with model limits
 
@@ -317,7 +316,7 @@ fetch spans
     request_count = count(),
     by: {gen_ai.response.model}
 | fieldsAdd total_tokens = total_input_tokens + total_output_tokens
-| lookup [load "/lookups/ai/bedrock/model-max-tokens"],
+| lookup [load "/lookups/ai/llm/model-max-tokens"],
     sourceField:gen_ai.response.model,
     lookupField:model,
     prefix:"limits."
@@ -357,9 +356,9 @@ fetch spans
 | sort request_count desc
 ```
 
-Expect one row per model that served a request. With **Use Knowledge Base (RAG)** on, `amazon-nova-micro` always appears, because it runs the intent step, together with the model you selected for the answers (`amazon-nova-lite` unless you changed the dropdown). With RAG off there is no intent step, so only the selected model appears. If you selected `amazon-nova-micro`, you see a single row. The query is worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
+Expect one row per model that served a request. With **Use Knowledge Base (RAG)** on, `claude-haiku-5-5` always appears, because it runs the intent step. It is also the default answer model, so if you never changed the dropdown you see a single row. With RAG off there is no intent step, so only the selected model appears. The query is worth keeping, because in a real environment it shows at once when a new model, or an unexpected fallback, starts serving traffic. The lookup tables in the next steps use this same identifier to find limits and prices.
 
-> **Try it:** pick a different model in the chat UI's **Model** dropdown, ask the same question, and run the query again. If you pick `amazon-nova-pro`, a new row appears. If you pick `amazon-nova-micro`, no new row appears because Micro is already there from the intent step; only its request count goes up.
+> **Try it:** pick a different model in the chat UI's **Model** dropdown, ask the same question, and run the query again. If you pick `claude-haiku-4-5`, a new row appears. If you go back to `claude-haiku-5-5`, no new row appears because it is already there from the intent step; only its request count goes up.
 
 ### 8.2 Average response time by operation
 
@@ -383,17 +382,17 @@ Try changing the visualisation to **Categorical**. Look for the operations with 
 
 ### 9.1 Inspect the pricing lookup table
 
-The workshop uses several Amazon Bedrock models through LiteLLM. Rather than hardcoding prices into every query, the current pricing is maintained in a Grail lookup table.
+The workshop uses two Anthropic Claude models through LiteLLM. Rather than hardcoding prices into every query, the current pricing is maintained in a Grail lookup table.
 
 Run:
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
 The table maps each model identifier to its input and output price per million tokens, and is keyed on the model alias that your spans record.
 
-At the time of writing, Amazon Nova Micro costs $0.035 per million input tokens and $0.14 per million output tokens, Nova Lite $0.06 and $0.24, and Nova Pro $0.80 and $3.20. The values in the lookup are the ones your queries will actually use, and the instructor can update them without changing any query.
+At the time of writing, Claude Haiku 5.5 costs $0.10 per million input tokens and $0.50 per million output tokens, and Claude Haiku 4.5 $1.00 and $5.00, ten times more. Haiku 5.5 also uses a newer tokenizer that counts the same text as roughly 30% more tokens, so compare cost, not only token counts. The values in the lookup are the ones your queries will actually use, and the instructor can update them without changing any query.
 
 Local vectorisation has no hosted-model token cost.
 
@@ -411,7 +410,7 @@ fetch spans
     request_count = count(),
     by: {gen_ai.response.model}
 | fieldsAdd total_tokens = total_input_tokens + total_output_tokens
-| lookup [load "/lookups/ai/bedrock/model-costs"],
+| lookup [load "/lookups/ai/llm/model-costs"],
     sourceField:gen_ai.response.model,
     lookupField:model,
     prefix:"pricing."
@@ -558,7 +557,7 @@ fetch spans
 Then load the lookup:
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
 Confirm that every value in `gen_ai.response.model` exists in the lookup table's `model` field, and that your account can read Grail lookup files.

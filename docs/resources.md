@@ -40,9 +40,9 @@ Use this page as a reference for the technologies, configuration, DQL queries, a
 
 | Technology | Purpose | Link |
 |---|---|---|
-| Amazon Bedrock | Hosts the Amazon Nova models | [AWS Bedrock docs](https://docs.aws.amazon.com/bedrock/) |
-| Amazon Nova | Amazon language models used by the workshop | [Amazon Nova docs](https://docs.aws.amazon.com/nova/) |
-| LiteLLM | OpenAI-compatible gateway to Bedrock | [LiteLLM docs](https://docs.litellm.ai/) |
+| Claude API | Serves the Claude Haiku models | [Claude API docs](https://platform.claude.com/docs/) |
+| Claude Haiku | Anthropic language models used by the workshop | [Models overview](https://platform.claude.com/docs/en/about-claude/models/overview) |
+| LiteLLM | OpenAI-compatible gateway to the Claude API | [LiteLLM docs](https://docs.litellm.ai/) |
 | LangChain | Application orchestration | [LangChain docs](https://docs.langchain.com/) |
 | ChromaDB | Local vector store | [Chroma docs](https://docs.trychroma.com/) |
 | GitHub Codespaces | Attendee development environment | [Codespaces docs](https://docs.github.com/en/codespaces) |
@@ -69,8 +69,8 @@ GitHub Codespace
              └── Chat requests ─────────► LiteLLM gateway
                                                 │
                                                 ▼
-                                      Amazon Bedrock
-                                      Nova Micro / Lite / Pro
+                                      Claude API (Anthropic)
+                                      Claude Haiku 5.5 / 4.5
 ```
 
 Retrieval vectors are generated in-process, so only chat requests leave the Codespace for the model gateway. There is no embedding-model API call and no embedding token cost.
@@ -90,7 +90,7 @@ ATTENDEE_ID=your-workshop-id
 # LiteLLM gateway
 LLM_BASE_URL=http://INSTRUCTOR_PROVIDED_HOST:4000/v1
 LLM_API_KEY=sk-workshop-INSTRUCTOR_PROVIDED_VALUE
-LLM_CHAT_MODEL=amazon-nova-lite
+LLM_CHAT_MODEL=claude-haiku-5-5
 
 # Dynatrace OTLP ingestion
 DT_ENDPOINT=https://YOUR_ENV.live.dynatrace.com/api/v2/otlp
@@ -167,23 +167,16 @@ Logging is configured in the repository and runs before Lab 1. The Traceloop ini
 | Vector store | ChromaDB, in memory |
 | Chunk size and overlap | Sections split at 1,500 characters, 150 overlap |
 | Retrieved context | Best-matching topic (all its sections) plus up to 2 related sections |
-| LLM calls per RAG request | 2 (intent classification on `amazon-nova-micro`, response generation on the selected model) |
+| LLM calls per RAG request | 2 (intent classification on `claude-haiku-5-5`, response generation on the selected model) |
 
 ### Models
 
-| Model alias (`gen_ai.request.model`) | Amazon Bedrock model | Used for | Input / output price per 1M tokens |
+| Model alias (`gen_ai.request.model`) | Anthropic model | Used for | Input / output price per 1M tokens |
 |---|---|---|---|
-| `amazon-nova-micro` | Amazon Nova Micro | Intent classification (always); selectable | $0.035 / $0.14 |
-| `amazon-nova-lite` | Amazon Nova Lite | Default answer model | $0.06 / $0.24 |
-| `amazon-nova-pro` | Amazon Nova Pro | Selectable | $0.80 / $3.20 |
+| `claude-haiku-5-5` | Claude Haiku 5.5 | Intent classification (always); default answer model | $0.10 / $0.50 |
+| `claude-haiku-4-5` | Claude Haiku 4.5 | Selectable (previous generation) | $1.00 / $5.00 |
 
-| LiteLLM alias | Bedrock inference profile |
-|---|---|
-| `amazon-nova-micro` | `us.amazon.nova-micro-v1:0` |
-| `amazon-nova-lite` | `us.amazon.nova-lite-v1:0` |
-| `amazon-nova-pro` | `us.amazon.nova-pro-v1:0` |
-
-Spans record the LiteLLM alias in `gen_ai.request.model` and `gen_ai.response.model`, never the Bedrock inference profile. LLM spans are named `ChatBedrockViaLiteLLM.chat` and carry `gen_ai.system = AWS`. The client speaks the OpenAI chat-completions protocol to LiteLLM, which translates it for Amazon Bedrock. The deprecated alias `workshop-chat` still routes to Nova Micro.
+Spans record the LiteLLM alias in `gen_ai.request.model`. LLM spans are named `ChatAnthropicViaLiteLLM.chat` and carry `gen_ai.system = Anthropic`. The client speaks the OpenAI chat-completions protocol to LiteLLM, which translates it for the Claude API.
 
 ---
 
@@ -192,7 +185,7 @@ Spans record the LiteLLM alias in `gen_ai.request.model` and `gen_ai.response.mo
 ### Model pricing
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
 Fields: `model`, `input_cost_per_million_usd`, `output_cost_per_million_usd`
@@ -200,7 +193,7 @@ Fields: `model`, `input_cost_per_million_usd`, `output_cost_per_million_usd`
 ### Model token limits
 
 ```dql
-load "/lookups/ai/bedrock/model-max-tokens"
+load "/lookups/ai/llm/model-max-tokens"
 ```
 
 Fields: `model`, `max_input_tokens`, `max_output_tokens`
@@ -271,7 +264,7 @@ fetch spans
     request_count = count(),
     by: {gen_ai.response.model}
 | fieldsAdd total_tokens = total_input_tokens + total_output_tokens
-| lookup [load "/lookups/ai/bedrock/model-max-tokens"],
+| lookup [load "/lookups/ai/llm/model-max-tokens"],
     sourceField:gen_ai.response.model,
     lookupField:model,
     prefix:"limits."
@@ -296,7 +289,7 @@ fetch spans
     request_count = count(),
     by: {gen_ai.response.model}
 | fieldsAdd total_tokens = total_input_tokens + total_output_tokens
-| lookup [load "/lookups/ai/bedrock/model-costs"],
+| lookup [load "/lookups/ai/llm/model-costs"],
     sourceField:gen_ai.response.model,
     lookupField:model,
     prefix:"pricing."
@@ -477,7 +470,7 @@ curl -s http://localhost:8000/chat \
 
 ### The application cannot reach the LLM gateway
 
-Check that `LLM_BASE_URL` ends with `/v1`, `LLM_API_KEY` matches the instructor-provided key, `LLM_CHAT_MODEL` is a model alias from the table above (for example `amazon-nova-lite`), and that no placeholder value such as `INSTRUCTOR_GATEWAY` or `PASTE_HERE` remains in `.env`.
+Check that `LLM_BASE_URL` ends with `/v1`, `LLM_API_KEY` matches the instructor-provided key, `LLM_CHAT_MODEL` is a model alias from the table above (for example `claude-haiku-5-5`), and that no placeholder value such as `INSTRUCTOR_GATEWAY` or `PASTE_HERE` remains in `.env`.
 
 ### LiteLLM returns `No connected db`
 
@@ -505,7 +498,7 @@ fetch spans
 ```
 
 ```dql
-load "/lookups/ai/bedrock/model-costs"
+load "/lookups/ai/llm/model-costs"
 ```
 
 The observed value must exist in the lookup's `model` field.

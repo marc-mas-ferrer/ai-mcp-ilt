@@ -4,7 +4,7 @@ Dynatrace AI Observability Workshop
 Sample RAG (Retrieval Augmented Generation) Service
 
 This is a simple AI-powered Q&A service that uses:
-- Amazon Bedrock models (Nova Micro, Lite and Pro) through an
+- Anthropic Claude models (Haiku 5.5 and Haiku 4.5) through an
   OpenAI-compatible LiteLLM gateway
 - Deterministic local vectorization for document retrieval
 - ChromaDB for vector storage and similarity search
@@ -130,13 +130,13 @@ ATTENDEE_ID = os.getenv("ATTENDEE_ID", "workshop-attendee")
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
 
-# LLM gateway configuration (LiteLLM -> Amazon Bedrock)
-# Model names are LiteLLM aliases such as "amazon-nova-lite"; the gateway maps
-# each alias to a Bedrock inference profile.
+# LLM gateway configuration (LiteLLM -> Claude API)
+# Model names are LiteLLM aliases such as "claude-haiku-5-5"; the gateway maps
+# each alias to an Anthropic Claude model.
 LLM_BASE_URL        = os.getenv("LLM_BASE_URL")
 LLM_API_KEY         = os.getenv("LLM_API_KEY")
-LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "amazon-nova-lite")      # default answer model
-LLM_INTENT_MODEL    = os.getenv("LLM_INTENT_MODEL", "amazon-nova-micro")   # query classifier
+LLM_CHAT_MODEL      = os.getenv("LLM_CHAT_MODEL", "claude-haiku-5-5")      # default answer model
+LLM_INTENT_MODEL    = os.getenv("LLM_INTENT_MODEL", "claude-haiku-5-5")   # query classifier
 
 
 def _csv(value: str) -> list:
@@ -146,7 +146,7 @@ def _csv(value: str) -> list:
 # Models the chat UI may select. The default answer model is always included.
 LLM_AVAILABLE_MODELS = _csv(os.getenv(
     "LLM_AVAILABLE_MODELS",
-    "amazon-nova-micro,amazon-nova-lite,amazon-nova-pro",
+    "claude-haiku-5-5,claude-haiku-4-5",
 ))
 if LLM_CHAT_MODEL not in LLM_AVAILABLE_MODELS:
     LLM_AVAILABLE_MODELS.insert(0, LLM_CHAT_MODEL)
@@ -470,31 +470,31 @@ llm = None          # default answer model
 intent_llm = None   # cheap model that classifies the question
 
 
-class ChatBedrockViaLiteLLM(ChatOpenAI):
+class ChatAnthropicViaLiteLLM(ChatOpenAI):
     """
-    Chat client for Amazon Bedrock models served through a LiteLLM gateway.
+    Chat client for Anthropic Claude models served through a LiteLLM gateway.
 
     LiteLLM speaks the OpenAI chat-completions protocol, so the transport is
     LangChain's ChatOpenAI. This subclass exists so the telemetry says what is
     really happening: OpenLLMetry names the span after the class
-    (ChatBedrockViaLiteLLM.chat) and takes the provider from the class name and
-    LangChain's ls_provider, so Dynatrace shows an AWS provider, not "openai".
+    (ChatAnthropicViaLiteLLM.chat) and takes the provider from the class name and
+    LangChain's ls_provider, so Dynatrace shows Anthropic, not "openai".
     """
 
     def _get_ls_params(self, stop=None, **kwargs):
         params = super()._get_ls_params(stop=stop, **kwargs)
-        params["ls_provider"] = "amazon_bedrock"
+        params["ls_provider"] = "anthropic"
         return params
 
 
 _model_clients: dict = {}
 
 
-def make_chat_model(model: str, temperature: float = 0) -> ChatBedrockViaLiteLLM:
+def make_chat_model(model: str, temperature: float = 0) -> ChatAnthropicViaLiteLLM:
     """Return a cached chat client for one LiteLLM model alias."""
     key = (model, temperature)
     if key not in _model_clients:
-        _model_clients[key] = ChatBedrockViaLiteLLM(
+        _model_clients[key] = ChatAnthropicViaLiteLLM(
             model=model,
             api_key=LLM_API_KEY,
             base_url=LLM_BASE_URL,
@@ -584,7 +584,7 @@ SIMULATED_ERRORS = [
     },
     {
         "exception": LLMResponseError,
-        "message": "Guardrail intervened: Response blocked by Amazon Bedrock Guardrails (policy: content filter, category: hate, confidence: medium)",
+        "message": "Guardrail intervened: Response blocked by content safety guardrail (policy: content filter, category: hate, confidence: medium)",
         "log_level": "warning",
         "error_code": "CONTENT_FILTER_BLOCK"
     },
@@ -735,8 +735,8 @@ def build_environment_block() -> str:
         f"- Answer model (default): {LLM_CHAT_MODEL}\n"
         f"- Intent classification model: {LLM_INTENT_MODEL}\n"
         f"- Models you can select in the chat UI: {', '.join(LLM_AVAILABLE_MODELS)}\n"
-        "- All models run on Amazon Bedrock, reached through the LiteLLM gateway; "
-        "LLM spans are named ChatBedrockViaLiteLLM.chat\n"
+        "- All models are Anthropic Claude models, reached through the LiteLLM gateway; "
+        "LLM spans are named ChatAnthropicViaLiteLLM.chat\n"
         "- To find this app's traces in Dynatrace, run this DQL:\n"
         "fetch spans\n"
         f'| filter service.name == "{service}"\n'
@@ -760,7 +760,7 @@ def generate_context(docs: list) -> str:
 # Static system prompt: behaviour and rules only. The facts come from the
 # retrieved reference material, which is sent with the question (see
 # RAG_USER_TEMPLATE). Keeping this prompt stable keeps requests comparable between
-# models. Amazon Bedrock only caches a prompt prefix when the request marks a
+# models. The Claude API only caches a prompt prefix when the request marks a
 # cache point, which this app does not do, so no prompt caching is expected.
 RAG_SYSTEM_PROMPT = """You are an expert AI assistant for the Dynatrace AI Observability Workshop.
 You help intermediate developers and SREs who are new to observability, and you
@@ -948,7 +948,13 @@ def analyze_query_intent(query: str) -> dict:
     
     Query: {query}"""
     
-    result = intent_llm.invoke([HumanMessage(content=classification_prompt)])
+    # The intent is only recorded in the trace, so a failed call must not stop
+    # the answer from being generated.
+    try:
+        result = intent_llm.invoke([HumanMessage(content=classification_prompt)])
+    except Exception as exc:
+        logger.warning(f"Intent classification failed, continuing without it: {exc}")
+        return {"intent": "unknown", "query": query}
     return {"intent": result.content.strip().lower(), "query": query}
 
 
@@ -999,8 +1005,9 @@ def initialize_rag():
         # by the health check. Pipeline retrieval goes through select_documents.
         retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
-        # Chat clients for Amazon Bedrock models via the LiteLLM gateway.
-        # The intent classifier and the answer model are separate models.
+        # Chat clients for Anthropic Claude models via the LiteLLM gateway.
+        # The intent classifier and the answer model are separate clients; by
+        # default both use claude-haiku-5-5.
         llm = make_chat_model(LLM_CHAT_MODEL, 0)
         intent_llm = make_chat_model(LLM_INTENT_MODEL, 0)
 
