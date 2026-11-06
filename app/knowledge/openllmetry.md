@@ -14,7 +14,7 @@ Instrumentors patch the supported libraries, so there is little or no change to 
 
 ## Traceloop.init
 
-Instrumentation is switched on by calling Traceloop.init() once at startup, after the environment is loaded. The key arguments are app_name (becomes the service name), api_endpoint (the OTLP endpoint, which for Dynatrace is DT_ENDPOINT ending in /api/v2/otlp) and headers (for Dynatrace, Authorization: Api-Token followed by the token).
+Instrumentation is switched on by calling Traceloop.init() once at startup, after the environment is loaded. The key arguments are app_name (becomes the service name), api_endpoint (the OTLP endpoint, which for Dynatrace is DT_ENDPOINT ending in /api/v2/otlp) and headers (for Dynatrace, Authorization: Api-Token followed by the token). DT_ENDPOINT already includes /api/v2/otlp, so pass it to api_endpoint unchanged and do not append the path again.
 
 Example used in Lab 1:
 
