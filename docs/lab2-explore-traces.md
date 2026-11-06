@@ -235,7 +235,7 @@ Locate the `retrieve_documents.task` span. This task:
 3. Selects the most relevant document chunks
 4. Returns those chunks to the RAG pipeline
 
-Because vectorisation happens in-process, you should not expect a remote `openai.embeddings` span, hosted-model token attributes, or an embedding cost for this operation. What you can observe is the surrounding task span and the ChromaDB query beneath it.
+Because vectorisation happens in-process, you should not expect a remote embedding span, hosted-model token attributes, or an embedding cost for this operation. What you can observe is the surrounding task span and the ChromaDB query beneath it.
 
 > In a production RAG system this step would normally call a trained embedding model, and that call would appear as its own span with its own token usage and latency. The workshop uses a local function so that every attendee gets identical, repeatable retrieval without an extra dependency.
 
